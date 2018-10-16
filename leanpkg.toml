@@ -1,0 +1,8 @@
+[package]
+name = "ModalTab"
+version = "0.1"
+lean_version = "master"
+path = "src"
+
+[dependencies]
+mathlib = {git = "https://github.com/leanprover/mathlib", rev = "a33ab1294b386f5fc6465b7221d48a052412bcd8"}
