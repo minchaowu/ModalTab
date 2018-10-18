@@ -7,16 +7,16 @@ local attribute [instance] classical.prop_decidable
 { rel := λ s t, s ∈ @closure _ tm.to_topological_space {t},
   val := λ n s, tm.v n s }
 
-theorem trans_force {α : Type} {tm : topo_model α} : Π s (φ : nnf), (topo_force tm s φ) → force (topo_to_kripke tm) s φ
+theorem trans_force_left {α : Type} {tm : topo_model α} : Π s (φ : nnf), (topo_force tm s φ) → force (topo_to_kripke tm) s φ
 | s (var n)   h := by dsimp at h; simp [h]
 | s (neg n)   h := by dsimp at h; simp [h]
-| s (and φ ψ) h := begin cases h with l r, split, apply trans_force _ _ l, apply trans_force _ _ r end
-| s (or φ ψ)  h := begin cases h, left, apply trans_force _ _ h, right, apply trans_force _ _ h end
+| s (and φ ψ) h := begin cases h with l r, split, apply trans_force_left _ _ l, apply trans_force_left _ _ r end
+| s (or φ ψ)  h := begin cases h, left, apply trans_force_left _ _ h, right, apply trans_force_left _ _ h end
 | s (box φ)   h := 
 begin
   rcases h with ⟨w, hw, hmem⟩,
   intros s' hs',
-  apply trans_force,
+  apply trans_force_left,
   apply hw.2,
   rw ←set.inter_singleton_ne_empty,
   have := (@mem_closure_iff _ tm.to_topological_space _ _).1,
@@ -43,5 +43,5 @@ begin
       { intro x, intro hx, rw set.mem_sInter at hx, apply hx, split, repeat {assumption} },
   rw set.inter_singleton_ne_empty,
   apply this hw.1 },
-  { exact trans_force _ _ hw.2 }
+  { exact trans_force_left _ _ hw.2 }
 end

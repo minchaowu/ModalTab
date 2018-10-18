@@ -29,6 +29,26 @@ instance nnf_repr : has_repr nnf := ⟨nnf.to_string⟩
 
 instance dec_eq_nnf : decidable_eq nnf := by mk_dec_eq_instance
 
+structure kripke (states : Type) :=
+(val       : nat → states → bool)
+(rel       : states → states → bool)
+
+open nnf
+
+@[simp] def force {states : Type} (k : kripke states) : states → nnf → Prop
+| s (var n)    := k.val n s
+| s (neg n)    := ¬ k.val n s
+| s (and φ ψ)  := force s φ ∧ force s ψ
+| s (or φ ψ)   := force s φ ∨ force s ψ
+| s (box φ)    := ∀ s', k.rel s s' → force s' φ
+| s (dia φ)    := ∃ s', k.rel s s' ∧ force s' φ
+
+def sat {st} (k : kripke st) (s) (Γ : list nnf) : Prop := 
+∀ φ ∈ Γ, force k s φ
+
+def unsatisfiable (Γ : list nnf) : Prop := 
+∀ (st) (k : kripke st) s, ¬ sat k s Γ
+
 @[simp] def node_size : list nnf → ℕ 
 | []          := 0
 | (hd :: tl)  := sizeof hd + node_size tl

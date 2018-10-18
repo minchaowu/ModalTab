@@ -1,4 +1,4 @@
-import .semantics analysis.topology.topological_space
+import defs analysis.topology.topological_space
 open nnf
 
 structure topo_model (α : Type) extends topological_space α := 
