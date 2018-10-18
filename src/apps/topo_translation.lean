@@ -7,11 +7,11 @@ local attribute [instance] classical.prop_decidable
 { rel := λ s t, s ∈ @closure _ tm.to_topological_space {t},
   val := λ n s, tm.v n s }
 
-theorem trans_force_left {α : Type} {tm : topo_model α} : Π s (φ : nnf), (topo_force tm s φ) → force (topo_to_kripke tm) s φ
+theorem trans_force_left {α : Type} {tm : topo_model α} : Π {s} {φ : nnf}, (topo_force tm s φ) → force (topo_to_kripke tm) s φ
 | s (var n)   h := by dsimp at h; simp [h]
 | s (neg n)   h := by dsimp at h; simp [h]
-| s (and φ ψ) h := begin cases h with l r, split, apply trans_force_left _ _ l, apply trans_force_left _ _ r end
-| s (or φ ψ)  h := begin cases h, left, apply trans_force_left _ _ h, right, apply trans_force_left _ _ h end
+| s (and φ ψ) h := begin cases h with l r, split, apply trans_force_left l, apply trans_force_left r end
+| s (or φ ψ)  h := begin cases h, left, apply trans_force_left h, right, apply trans_force_left h end
 | s (box φ)   h := 
 begin
   rcases h with ⟨w, hw, hmem⟩,
@@ -43,5 +43,15 @@ begin
       { intro x, intro hx, rw set.mem_sInter at hx, apply hx, split, repeat {assumption} },
   rw set.inter_singleton_ne_empty,
   apply this hw.1 },
-  { exact trans_force_left _ _ hw.2 }
+  { exact trans_force_left hw.2 }
 end
+
+theorem sat_of_topo_sat {Γ : list nnf} 
+{α : Type} (tm : topo_model α) (s) (h : topo_sat tm s Γ) : 
+sat (topo_to_kripke tm) s Γ := λ φ hφ, trans_force_left $ h φ hφ
+
+theorem unsat_topo_of_unsat {Γ : list nnf} : unsatisfiable Γ → topo_unsatisfiable Γ := 
+λ h, (λ α tm s hsat, @h _ (topo_to_kripke tm) s (sat_of_topo_sat _ _ hsat))
+
+def not_topo_force_of_unsat {φ} : unsatisfiable [φ] → ∀ (α) (tm : topo_model α) s, ¬ topo_force tm s φ := 
+λ h, topo_unsat_singleton $ unsat_topo_of_unsat h

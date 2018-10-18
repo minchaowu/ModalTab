@@ -15,4 +15,12 @@ structure topo_model (α : Type) extends topological_space α :=
 
 def topo_sat {α : Type} (tm : topo_model α) (s) (Γ : list nnf) : Prop := ∀ φ ∈ Γ, topo_force tm s φ
 
+def topo_unsatisfiable (Γ : list nnf) : Prop := 
+∀ (α) (tm : topo_model α) s, ¬ topo_sat tm s Γ
 
+def topo_unsat_singleton {φ} : topo_unsatisfiable [φ] → 
+∀ (α) (tm : topo_model α) s, ¬ topo_force tm s φ := 
+begin
+  intro h, intros, intro hf,
+  apply h, intros ψ hψ, rw list.mem_singleton at hψ, rw hψ, exact hf
+end

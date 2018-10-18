@@ -49,6 +49,13 @@ def sat {st} (k : kripke st) (s) (Γ : list nnf) : Prop :=
 def unsatisfiable (Γ : list nnf) : Prop := 
 ∀ (st) (k : kripke st) s, ¬ sat k s Γ
 
+def unsat_singleton {φ} : unsatisfiable [φ] → ∀ (st) (k : kripke st) s, ¬ force k s φ
+ := 
+begin
+  intro h, intros, intro hf, 
+  apply h, intros ψ hψ, rw list.mem_singleton at hψ, rw hψ, exact hf
+end
+
 @[simp] def node_size : list nnf → ℕ 
 | []          := 0
 | (hd :: tl)  := sizeof hd + node_size tl
