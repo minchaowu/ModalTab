@@ -181,17 +181,16 @@ begin
       apply erase_diff_erase_sublist_of_sublist hsub, exact hsat } }
 end
 
-theorem modal_pmark {Γ} (h₁ : modal_applicable Γ) 
-(h₂ : ∃ (i : list nnf), i ∈ (unmodal Γ).1 ∧ unsatisfiable i): 
-pmark Γ (get_modal Γ) := 
+theorem modal_pmark {Γ} (h₁ : modal_applicable Γ) (i)
+(h₂ : i ∈ (unmodal Γ).1 ∧ unsatisfiable i): 
+pmark Γ (dia (list.head i) :: rebox (unbox Γ)) := 
 begin
   intro, intros hδ hsub, intro, intros, intro hsat,
-  rcases h₂ with ⟨w, hw, hunsat⟩,
-  have : ∃ (s' : st), sat k s' w,
-    { have := ((unmodal Γ).2.1 w hw).2.2 k s (Γ.diff Δ) _ _ hsat,  
-      exact this, 
-      {intros e he, apply mem_diff_of_mem he, intro hmem, apply hδ _ hmem, rw get_modal_iff_box, exact he}, 
-      {intros e he, apply mem_diff_of_mem he, intro hmem, apply hδ _ hmem, rw get_modal_iff_dia, exact he} },
-  cases this with w' hw',
-  apply hunsat, exact hw'
+  have := ((unmodal Γ).2.1 i h₂.1).2.2.2.2 h₂.2,
+  apply this st k s,
+  apply sat_subset _ _ _ _ _ hsat,
+  intros φ h, apply mem_diff_of_mem,
+  {cases h, rw h, exact ((unmodal Γ).2.1 i h₂.1).2.2.2.1,
+   apply rebox_unbox_of_mem, {simp [unbox_iff]}, {exact h}},
+  {intro, apply hδ, repeat {assumption} }
 end

@@ -1,18 +1,16 @@
 import .ops
 open subtype nnf
 
-class saturated (Γ : list nnf) :=
+class val_constructible (Γ : list nnf) extends saturated Γ:=
 (no_contra : ∀ {n}, var n ∈ Γ → neg n ∉ Γ)
-(no_and : ∀ {φ ψ}, nnf.and φ ψ ∉ Γ)
-(no_or : ∀ {φ ψ}, nnf.or φ ψ ∉ Γ)
 (v : list ℕ)
 (hv : ∀ n, var n ∈ Γ ↔ n ∈ v)
 
-class modal_applicable (Γ : list nnf) extends saturated Γ :=
+class modal_applicable (Γ : list nnf) extends val_constructible Γ :=
 (φ : nnf)
 (ex : dia φ ∈ Γ)
 
-class model_constructible (Γ : list nnf) extends saturated Γ :=
+class model_constructible (Γ : list nnf) extends val_constructible Γ :=
 (no_dia : ∀ {φ}, nnf.dia φ ∉ Γ)
 
 def unmodal (Γ : list nnf) : {x : list $ list nnf // 
@@ -21,37 +19,49 @@ def unmodal (Γ : list nnf) : {x : list $ list nnf //
 (∀ {st : Type} (k : kripke st) s Δ 
 (h₁ : ∀ φ, box φ ∈ Γ → box φ ∈ Δ) 
 (h₂ : ∀ φ, dia φ ∈ Γ → dia φ ∈ Δ), 
-sat k s Δ → ∃ s', sat k s' i)) 
+sat k s Δ → ∃ s', sat k s' i) ∧ 
+(dia (list.head i) ∈ Γ) ∧
+Π h : unsatisfiable i, unsatisfiable (dia (list.head i) :: rebox (unbox Γ))) 
 ∧ 
 ∀ φ ∈ undia Γ, (φ :: unbox Γ) ∈ x} := 
 list.smap _ (λ d, d :: (unbox Γ)) (undia Γ) 
 (begin 
    intros φ hd, split, {apply undia_size hd}, 
    split,
-   {intros ψ hb, right, apply (@unbox_iff Γ ψ).1, exact hb},
-   {intros st k s Δ h₁ h₂ h, 
-    have : force k s (dia φ), 
-      {apply h, apply h₂, rw undia_iff, exact hd}, 
-    rcases this with ⟨w, hrel, hforce⟩,
-    split, swap, {exact w}, 
-    {intro ψ, intro hψ, cases hψ, 
-      {rw hψ, exact hforce}, 
-      {have := h₁ _ ((@unbox_iff Γ ψ).2 hψ), 
-       have := h _ this,
-       apply this _ hrel} } }
+   { intros ψ hb, right, apply (@unbox_iff Γ ψ).1, exact hb },
+   split, 
+   { intros st k s Δ h₁ h₂ h, 
+     have : force k s (dia φ), 
+       { apply h, apply h₂, rw undia_iff, exact hd }, 
+     rcases this with ⟨w, hrel, hforce⟩,
+     split, swap, {exact w}, 
+     { intro ψ, intro hψ, cases hψ, 
+       {rw hψ, exact hforce}, 
+       {have := h₁ _ ((@unbox_iff Γ ψ).2 hψ), 
+        have := h _ this,
+        apply this _ hrel} } },
+   split,
+   { dsimp, rw undia_iff, exact hd },
+   { intro h, intro, intros k s hsat, dsimp at hsat,
+     have ex := hsat (dia φ) (by simp),
+     cases ex with s' hs',
+     apply h st k s', intros ψ hmem,
+     cases hmem, 
+     {rw hmem, exact hs'.2}, 
+     {have := (@mem_rebox ψ (unbox Γ)).2 hmem, 
+      apply hsat (box ψ) (by right; assumption) s' hs'.1 } }
 end)
 
 def unmodal_size (Γ : list nnf) : ∀ (i : list nnf),  i ∈ (unmodal Γ).1 → (node_size i < node_size Γ) := 
 λ i hi, (((unmodal Γ).2.1) i hi).1
 
-def unsat_of_unsat_unmodal {Γ : list nnf} (h : modal_applicable Γ) : (∃ (i:list nnf), i ∈ (unmodal Γ).1 ∧ unsatisfiable i) → unsatisfiable Γ := 
+def unsat_of_unsat_unmodal {Γ : list nnf} (h : modal_applicable Γ) (i) : i ∈ (unmodal Γ).1 ∧ unsatisfiable i → unsatisfiable Γ := 
 begin
   intro hex,
-  rcases hex with ⟨i, l, r⟩,
   intro, intros, intro h,
-  have := ((unmodal Γ).2.1 i l).2.2 k s Γ (λ x hx, hx) (λ x hx, hx) h, 
+  have := ((unmodal Γ).2.1 i hex.1).2.2.1 k s Γ (λ x hx, hx) (λ x hx, hx) h, 
   cases this with w hw,
-  exact r _ k w hw
+  exact hex.2 _ k w hw
 end
 
 /- Regular lemmas for the propositional part. -/

@@ -21,6 +21,10 @@ begin
     {apply mem_cons_of_mem, apply (smap tl _).2.2, exact he} }
 end⟩
 
+@[simp] def ne_empty_head : Π l : list α, l ≠ [] → α
+| []       h := by contradiction
+| (a :: l) h := a
+
 end list
 
 @[simp] def unbox : list nnf → list nnf
@@ -91,6 +95,71 @@ begin
   all_goals 
   {dsimp, apply nat.lt_add_left, apply unbox_size, 
   cases h, rw h₁ at h, contradiction, exact h}
+end
+
+@[simp] def rebox : list nnf → list nnf 
+| [] := []
+| (hd::tl) := box hd :: rebox tl
+
+theorem rebox_unbox_of_mem : Π {Γ} (h : ∀ {φ}, φ ∈ unbox Γ → box φ ∈ Γ), rebox (unbox Γ) ⊆ Γ
+| [] h := by simp
+| (hd::tl) h := 
+begin
+  cases hψ : hd,
+  case nnf.box : φ {dsimp, simp [cons_subset_cons], apply subset_cons_of_subset, apply rebox_unbox_of_mem, simp [unbox_iff]},
+  all_goals {dsimp, apply subset_cons_of_subset, apply rebox_unbox_of_mem, simp [unbox_iff]}
+end
+
+theorem unbox_rebox : Π {Γ}, unbox (rebox Γ) = Γ
+| [] := by simp
+| (hd::tl) := by simp [unbox_rebox]
+
+-- Just that I don't want to say ∃ φ s.t. ...
+def box_only_rebox : Π {Γ}, box_only (rebox Γ)
+| [] := {no_var := by simp, 
+         no_neg := by simp, 
+         no_and := by simp, 
+         no_or := by simp, 
+         no_dia := by simp}
+| (hd::tl) := 
+begin
+  cases h : hd,
+  all_goals {
+  exact { no_var := begin 
+                      intros n h, cases h, contradiction, 
+                      apply (@box_only_rebox tl).no_var, assumption 
+                    end, 
+          no_neg := begin 
+                      intros n h, cases h, contradiction, 
+                      apply (@box_only_rebox tl).no_neg, assumption 
+                    end,
+          no_and := begin 
+                      intros φ ψ h, cases h, contradiction, 
+                      apply (@box_only_rebox tl).no_and, assumption 
+                    end,
+          no_or := begin 
+                     intros φ ψ h, cases h, contradiction, 
+                     apply (@box_only_rebox tl).no_or, assumption 
+                   end, 
+          no_dia := begin 
+                      intros φ h, cases h, contradiction, 
+                      apply (@box_only_rebox tl).no_dia, assumption 
+                    end} }
+end
+
+theorem mem_rebox : Π {φ Γ}, box φ ∈ rebox Γ ↔ φ ∈ Γ
+| φ [] := by simp
+| φ (hd::tl) := 
+begin
+  split, 
+  {intro h, cases h₁ : hd, 
+   all_goals { cases h, 
+               {left, rw ←h₁, injection h}, 
+               {right,  have := (@mem_rebox φ tl).1, exact this h } }},
+  {intro h, cases h₁ : hd, 
+   all_goals { dsimp, cases h, 
+               {left, rw ←h₁, rw h}, 
+               {right, have := (@mem_rebox φ tl).2, exact this h } } }
 end
 
 @[simp] def undia : list nnf → list nnf

@@ -52,13 +52,9 @@ match get_contra Γ with
       match l with
       | inl w := begin 
                    left, 
-                   {apply unsat_of_unsat_unmodal, 
-                   exact ma, rcases w with ⟨w, hw, hmem⟩, 
-                   split, split, repeat {assumption} },
-                   swap, {exact get_modal Γ}, 
-                   {apply modal_pmark, exact ma, 
-                   rcases w with ⟨w, hw, hmem⟩, 
-                   split, split, repeat {assumption}}
+                   {exact unsat_of_unsat_unmodal ma w.1 w.2},
+                   swap, {exact dia (list.head w.1) :: rebox (unbox Γ)}, 
+                   { exact modal_pmark ma w.1 w.2, }
                  end
       | inr w := begin 
                    right, split, 
@@ -107,7 +103,7 @@ begin
   { simp } }
 end
 
--- the negation of the defining formula of K is unsatisfiable
+/- The negation of the defining formula of K is unsatisfiable -/
 
 def φ : nnf := 
 and (box $ or (neg 1) (var 2)) (and (box $ var 1) (dia $ neg 2))

@@ -16,6 +16,18 @@ inductive nnf : Type
 | dia (φ : nnf)
 
 open nnf
+instance : inhabited nnf := ⟨nnf.var 0⟩
+
+class no_literals (Γ : list nnf) :=
+(no_var : ∀ {n}, var n ∉ Γ)
+(no_neg : ∀ {n}, neg n ∉ Γ)
+
+class saturated (Γ : list nnf) :=
+(no_and : ∀ {φ ψ}, nnf.and φ ψ ∉ Γ)
+(no_or : ∀ {φ ψ}, nnf.or φ ψ ∉ Γ)
+
+class box_only (Γ : list nnf) extends no_literals Γ, saturated Γ :=
+(no_dia : ∀ {φ}, nnf.dia φ ∉ Γ)
 
 def nnf.to_string : nnf → string
 | (var n)    := "P" ++ n.repr
@@ -33,8 +45,12 @@ structure kripke (states : Type) :=
 (val       : nat → states → bool)
 (rel       : states → states → bool)
 
+instance inhabited_kripke : inhabited (kripke ℕ) := 
+⟨{ val := λ a b, tt, rel := λ a b, tt}⟩
+
 open nnf
 
+/- This has a better computaional behaviour than a forcing relation defined explicitly as an inductive predicate. -/
 @[simp] def force {states : Type} (k : kripke states) : states → nnf → Prop
 | s (var n)    := k.val n s
 | s (neg n)    := ¬ k.val n s
@@ -49,13 +65,24 @@ def sat {st} (k : kripke st) (s) (Γ : list nnf) : Prop :=
 def unsatisfiable (Γ : list nnf) : Prop := 
 ∀ (st) (k : kripke st) s, ¬ sat k s Γ
 
-def unsat_singleton {φ} : unsatisfiable [φ] → ∀ (st) (k : kripke st) s, ¬ force k s φ
+theorem unsat_singleton {φ} : unsatisfiable [φ] → ∀ (st) (k : kripke st) s, ¬ force k s φ
  := 
 begin
   intro h, intros, intro hf, 
   apply h, intros ψ hψ, rw list.mem_singleton at hψ, rw hψ, exact hf
 end
 
+theorem sat_of_empty {st} (k : kripke st) (s) : sat k s [] :=
+λ φ h, absurd h $ list.not_mem_nil _
+
+theorem ne_empty_of_unsat {Γ} (h : unsatisfiable Γ): Γ ≠ [] := 
+begin 
+  intro heq, rw heq at h, 
+  apply h, apply sat_of_empty, exact nat, 
+  apply inhabited_kripke.1, exact 0 
+end
+
+/- Do not use map -/
 @[simp] def node_size : list nnf → ℕ 
 | []          := 0
 | (hd :: tl)  := sizeof hd + node_size tl
