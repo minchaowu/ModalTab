@@ -147,7 +147,7 @@ begin
                     end} }
 end
 
-theorem mem_rebox : Π {φ Γ}, box φ ∈ rebox Γ ↔ φ ∈ Γ
+theorem rebox_iff : Π {φ Γ}, box φ ∈ rebox Γ ↔ φ ∈ Γ
 | φ [] := by simp
 | φ (hd::tl) := 
 begin
@@ -155,11 +155,11 @@ begin
   {intro h, cases h₁ : hd, 
    all_goals { cases h, 
                {left, rw ←h₁, injection h}, 
-               {right,  have := (@mem_rebox φ tl).1, exact this h } }},
+               {right,  have := (@rebox_iff φ tl).1, exact this h } }},
   {intro h, cases h₁ : hd, 
    all_goals { dsimp, cases h, 
                {left, rw ←h₁, rw h}, 
-               {right, have := (@mem_rebox φ tl).2, exact this h } } }
+               {right, have := (@rebox_iff φ tl).2, exact this h } } }
 end
 
 @[simp] def undia : list nnf → list nnf

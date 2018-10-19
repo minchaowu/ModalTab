@@ -48,7 +48,7 @@ list.smap _ (λ d, d :: (unbox Γ)) (undia Γ)
      apply h st k s', intros ψ hmem,
      cases hmem, 
      {rw hmem, exact hs'.2}, 
-     {have := (@mem_rebox ψ (unbox Γ)).2 hmem, 
+     {have := (@rebox_iff ψ (unbox Γ)).2 hmem, 
       apply hsat (box ψ) (by right; assumption) s' hs'.1 } }
 end)
 
