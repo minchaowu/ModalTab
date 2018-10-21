@@ -1,9 +1,9 @@
 import .topological_semantics
 open nnf
 
-local attribute [instance] classical.prop_decidable
+-- local attribute [instance] classical.prop_decidable
 
-@[simp] noncomputable def topo_to_kripke {α : Type} (tm : topo_model α) : kripke α := 
+@[simp] def topo_to_kripke {α : Type} (tm : topo_model α) : kripke α := 
 { rel := λ s t, s ∈ @closure _ tm.to_topological_space {t},
   val := λ n s, tm.v n s }
 
@@ -37,7 +37,7 @@ begin
   split, split, swap 3, 
   { exact w },
   rw (@mem_closure_iff _ tm.to_topological_space _ _),
-  { apply to_bool_true,
+  { --apply to_bool_true,
     intros o' hopen' hmem',
     have : o ⊆ o',
       { intro x, intro hx, rw set.mem_sInter at hx, apply hx, split, repeat {assumption} },

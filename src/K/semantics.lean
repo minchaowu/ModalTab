@@ -200,7 +200,10 @@ begin
   simpa using h
 end
 
-@[simp] def builder : kripke model := {val := mval, rel := mrel}
+-- @[simp] def builder : kripke model := {val := mval, rel := mrel}
+
+@[simp] def builder : kripke model := 
+{val := λ n s, mval n s, rel := λ s₁ s₂, mrel s₁ s₂}
 
 inductive batch_sat : list model → list (list nnf) → Prop
 | bs_nil : batch_sat [] []

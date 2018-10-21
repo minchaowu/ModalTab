@@ -62,6 +62,9 @@ local attribute [instance] prop_decidable
 theorem not_and_distrib : ¬ (a ∧ b) ↔ ¬a ∨ ¬b :=
 ⟨λ h, if ha : a then or.inr (λ hb, h ⟨ha, hb⟩) else or.inl ha, not_and_of_not_or_not⟩
 
+@[simp] theorem not_imp : ¬(a → b) ↔ a ∧ ¬b :=
+⟨λ h, ⟨of_not_imp h, not_of_not_imp h⟩, not_imp_of_and_not⟩
+
 end classical
 
 @[simp] def trans_size_left {st} (k : kripke st) : (Σ' (s) (φ : fml), fml_force k s φ) → ℕ := 
@@ -105,7 +108,7 @@ fml_force k s φ → force k s (fml.to_nnf φ)
                             dsimp at h,
                             rw classical.not_forall at h,
                             cases h with w hw,
-                            rw not_imp at hw,
+                            rw classical.not_imp at hw,
                             simp, split, split, 
                             {exact hw.1}, {apply trans_left, exact hw.2}
                           end
