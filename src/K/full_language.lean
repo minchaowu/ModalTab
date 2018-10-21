@@ -20,12 +20,6 @@ open fml
 | (box φ)    := fml_size φ + 1
 | (dia φ)    := fml_size φ + 1
 
-/- Note that the forcing relation of the full language is intended to be classical but defined in a constructive meta theory. On the other hand, the forcing relation of nnfs is constructive. 
-
-Ideally the semantics for implication should be fml_force s φ → fml_force s ψ, but defining it this way helps us prove one of the following directions constructively.
-
-Also note that the two definitions of implication make no difference when the meta theory is classical. So it is safe to do so if the target logic is intended to be classical. -/
-
 @[simp] def fml_force {states : Type} (k : kripke states) : states → fml → Prop
 | s (var n)    := k.val n s
 | s (neg φ)    := ¬ fml_force s φ
@@ -34,8 +28,6 @@ Also note that the two definitions of implication make no difference when the me
 | s (impl φ ψ) := ¬ fml_force s φ ∨ fml_force s ψ
 | s (box φ)    := ∀ s', k.rel s s' → fml_force s' φ
 | s (dia φ)    := ∃ s', k.rel s s' ∧ fml_force s' φ
-
-/- The translation between languages is purely constructive but is only valid when the meta theory is classical. It is this translation that grants the classical power to the decision procedure. -/
 
 @[simp] def fml.to_nnf : fml → nnf
 | (var n)          := nnf.var n
@@ -72,8 +64,6 @@ end classical
 
 @[simp] def trans_size_right {st} (k : kripke st) : (Σ' (s : st) (φ : fml), force k s (fml.to_nnf φ)) → ℕ := 
 λ h, fml_size h.snd.fst
-
-/- Now we show that in a classical meta theory, there is a translation between the (intended) classical forcing relation defined for the full language and the constructive forcing relation defined for just the nnfs -/
 
 /- This direction requires choice -/
 

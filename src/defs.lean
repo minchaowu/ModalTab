@@ -46,7 +46,7 @@ structure kripke (states : Type) :=
 (rel       : states → states → Prop)
 
 instance inhabited_kripke : inhabited (kripke ℕ) := 
-⟨{ val := λ a b, tt, rel := λ a b, tt}⟩
+⟨{ val := λ a b, tt, rel := λ a b, tt }⟩
 
 open nnf
 
