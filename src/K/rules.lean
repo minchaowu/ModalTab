@@ -17,11 +17,9 @@ def and_rule {Γ Δ} (i : and_instance Γ Δ) : node Δ → node Γ
 | (open_ w)  := begin
                   right,
                   clear and_rule,
-                  cases i,
+                  cases i with φ ψ h,
                   constructor,
-                  apply sat_and_of_sat_split,
-                  assumption,
-                  exact w.2
+                  exact sat_and_of_sat_split _ _ _ _ _ h w.2
                 end
 
 def jump_rule {Γ₁ Γ₂ Δ : list nnf} (i : or_instance Δ Γ₁ Γ₂) 
@@ -38,20 +36,16 @@ def or_rule {Γ₁ Γ₂ Δ} (i : or_instance Δ Γ₁ Γ₂) :
 | (open_ w) _ := begin
                    right,
                    clear or_rule,
-                   cases i,
+                   cases i with φ ψ h,
                    constructor,
-                   apply sat_or_of_sat_split_left,
-                   assumption,
-                   exact w.2
+                   exact sat_or_of_sat_split_left _ _ _ _ _ h w.2
                  end
 | _ (open_ w) := begin
                    right,
                    clear or_rule,
-                   cases i,
+                   cases i with φ ψ h,
                    constructor,
-                   apply sat_or_of_sat_split_right,
-                   assumption,
-                   exact w.2
+                   exact sat_or_of_sat_split_right _ _ _ _ _ h w.2
                  end
 | (closed m₁ h₁ p₁) (closed m₂ h₂ p₂):= 
                  begin 
@@ -65,13 +59,13 @@ begin
   right, constructor,
   cases i with φ ψ hin, 
   swap, exact s,
-  apply sat_or_of_sat_split_left, exact hin, exact h
+  exact sat_or_of_sat_split_left _ _ _ _ _ hin h
 end
 
 def contra_rule {Δ n} (h : var n ∈ Δ ∧ neg n ∈ Δ) : node Δ := 
 begin
   left,
-  {apply unsat_contra, exact h.1, exact h.2},
+  {exact unsat_contra h.1 h.2},
   swap,
   {exact [var n, neg n]},
   {intros Δ' hΔ' hsub, 
@@ -84,7 +78,8 @@ end
 
 /-  This is essentially the modal rule. -/
 
-def tmap {p : list nnf → Prop} (f : Π φ, p φ → node φ): Π Γ : list $ list nnf, (∀ i∈ Γ, p i) → psum ({i // i ∈ Γ ∧ unsatisfiable i}) {x : list model // batch_sat x Γ}
+def tmap {p : list nnf → Prop} (f : Π Γ, p Γ → node Γ): Π Γ : list $ list nnf, (∀ i∈Γ, p i) → 
+psum ({i // i ∈ Γ ∧ unsatisfiable i}) {x : list model // batch_sat x Γ}
 | [] h := psum.inr ⟨[], bs_nil⟩
 | (hd :: tl) h := 
 match f hd (h hd (by simp)) with

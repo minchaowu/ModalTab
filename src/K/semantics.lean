@@ -161,9 +161,9 @@ begin
   intros e he,
   by_cases (e = or φ ψ),
   { rw h, dsimp, right, apply hl, simp},
-  {have : e ∈ Δ.erase (or φ ψ),
-     { rw mem_erase_of_ne, repeat { assumption } },
-   apply hl, simp [this]}
+  { have : e ∈ Δ.erase (or φ ψ),
+      { rw mem_erase_of_ne, repeat { assumption } },
+    apply hl, simp [this] }
 end
 
 end
@@ -199,8 +199,6 @@ begin
   intros v r m h, by_contradiction,
   simpa using h
 end
-
--- @[simp] def builder : kripke model := {val := mval, rel := mrel}
 
 @[simp] def builder : kripke model := 
 {val := λ n s, mval n s, rel := λ s₁ s₂, mrel s₁ s₂}
