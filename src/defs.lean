@@ -34,8 +34,8 @@ def nnf.to_string : nnf → string
 | (neg n)    := "¬P" ++ n.repr
 | (and φ ψ)  := nnf.to_string φ ++ "∧" ++ nnf.to_string ψ
 | (or φ ψ)   := nnf.to_string φ ++ "∨" ++ nnf.to_string ψ
-| (box φ)    := "□" ++ nnf.to_string φ 
-| (dia φ)    := "⋄" ++ nnf.to_string φ
+| (box φ)    := "□" ++ "(" ++ nnf.to_string φ ++ ")"
+| (dia φ)    := "◇" ++ "(" ++ nnf.to_string φ ++ ")"
 
 instance nnf_repr : has_repr nnf := ⟨nnf.to_string⟩
 
