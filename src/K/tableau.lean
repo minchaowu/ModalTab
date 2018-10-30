@@ -24,6 +24,7 @@ begin
   { simp } }
 end
 
+#print axioms classical_correctness
 
 open fml
 

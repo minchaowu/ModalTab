@@ -13,55 +13,60 @@ class modal_applicable (Γ : list nnf) extends val_constructible Γ :=
 class model_constructible (Γ : list nnf) extends val_constructible Γ :=
 (no_dia : ∀ {φ}, nnf.dia φ ∉ Γ)
 
-def unmodal (Γ : list nnf) : {x : list $ list nnf // 
-(∀ i ∈ x, (node_size i < node_size Γ) ∧ 
-(∀ φ, box φ ∈ Γ → φ ∈ i) ∧ 
+def unmodal (Γ : list nnf) : list $ list nnf := 
+list.map (λ d, d :: (unbox Γ)) (undia Γ)
+
+def unmodal_size (Γ : list nnf) : ∀ (i : list nnf),  i ∈ unmodal Γ → (node_size i < node_size Γ) := 
+list.mapp _ _ begin intros φ h, dsimp, apply undia_size h end
+
+def unmodal_mem_box (Γ : list nnf) : ∀ (i : list nnf),  i ∈ unmodal Γ → (∀ φ, box φ ∈ Γ → φ ∈ i) := 
+list.mapp _ _ begin intros φ h ψ hψ, right, apply (@unbox_iff Γ ψ).1 hψ end
+
+def unmodal_sat_of_sat (Γ : list nnf) : ∀ (i : list nnf),  i ∈ unmodal Γ → 
 (∀ {st : Type} (k : kripke st) s Δ 
 (h₁ : ∀ φ, box φ ∈ Γ → box φ ∈ Δ) 
 (h₂ : ∀ φ, dia φ ∈ Γ → dia φ ∈ Δ), 
-sat k s Δ → ∃ s', sat k s' i) ∧ 
-(dia (list.head i) ∈ Γ) ∧
-Π h : unsatisfiable i, unsatisfiable (dia (list.head i) :: rebox (unbox Γ))) 
-∧ 
-∀ φ ∈ undia Γ, (φ :: unbox Γ) ∈ x} := 
-list.smap _ (λ d, d :: (unbox Γ)) (undia Γ) 
-(begin 
-   intros φ hd, split, {apply undia_size hd}, 
-   split,
-   { intros ψ hb, right, apply (@unbox_iff Γ ψ).1, exact hb },
-   split, 
-   { intros st k s Δ h₁ h₂ h, 
-     have : force k s (dia φ), 
-       { apply h, apply h₂, rw undia_iff, exact hd }, 
-     rcases this with ⟨w, hrel, hforce⟩,
-     split, swap, {exact w}, 
-     { intro ψ, intro hψ, cases hψ, 
-       {rw hψ, exact hforce}, 
-       {have := h₁ _ ((@unbox_iff Γ ψ).2 hψ), 
-        have := h _ this,
-        apply this _ hrel} } },
-   split,
-   { dsimp, rw undia_iff, exact hd },
-   { intro h, intro, intros k s hsat, dsimp at hsat,
-     have ex := hsat (dia φ) (by simp),
-     cases ex with s' hs',
-     apply h st k s', intros ψ hmem,
-     cases hmem, 
-     {rw hmem, exact hs'.2}, 
-     {have := (@rebox_iff ψ (unbox Γ)).2 hmem, 
-      apply hsat (box ψ) (by right; assumption) s' hs'.1 } }
-end)
-
-def unmodal_size (Γ : list nnf) : ∀ (i : list nnf),  i ∈ (unmodal Γ).1 → (node_size i < node_size Γ) := 
-λ i hi, (((unmodal Γ).2.1) i hi).1
-
-def unsat_of_unsat_unmodal {Γ : list nnf} (h : modal_applicable Γ) (i) : i ∈ (unmodal Γ).1 ∧ unsatisfiable i → unsatisfiable Γ := 
+sat k s Δ → ∃ s', sat k s' i) :=
+list.mapp _ _ 
 begin
-  intro hex,
-  intro, intros, intro h,
-  have := ((unmodal Γ).2.1 i hex.1).2.2.1 k s Γ (λ x hx, hx) (λ x hx, hx) h, 
-  cases this with w hw,
-  exact hex.2 _ k w hw
+  intros φ hmem st k s Δ h₁ h₂ h, 
+  have : force k s (dia φ), 
+    { apply h, apply h₂, rw undia_iff, exact hmem }, 
+  rcases this with ⟨w, hrel, hforce⟩,
+  split, swap, {exact w}, 
+  { intro ψ, intro hψ, cases hψ, 
+    {rw hψ, exact hforce}, 
+    {have := h₁ _ ((@unbox_iff Γ ψ).2 hψ), 
+     have := h _ this,
+     apply this _ hrel} },
+end
+
+def unmodal_mem_head (Γ : list nnf) : ∀ (i : list nnf),  i ∈ unmodal Γ → dia (list.head i) ∈ Γ :=
+list.mapp _ _ begin intros φ hmem, dsimp, rw undia_iff, exact hmem end
+
+def unmodal_unsat_of_unsat (Γ : list nnf) : ∀ (i : list nnf),  i ∈ unmodal Γ → Π h : unsatisfiable i, unsatisfiable (dia (list.head i) :: rebox (unbox Γ)) :=
+list.mapp _ _ 
+begin 
+intros φ _,
+{ intro h, intro, intros k s hsat, dsimp at hsat,
+  have ex := hsat (dia φ) (by simp),
+  cases ex with s' hs',
+  apply h st k s', intros ψ hmem,
+  cases hmem, 
+  {rw hmem, exact hs'.2}, 
+  {have := (@rebox_iff ψ (unbox Γ)).2 hmem, 
+   apply hsat (box ψ) (by right; assumption) s' hs'.1 } }
+end
+
+def mem_unmodal (Γ : list nnf) (φ) (h : φ ∈ undia Γ) : (φ :: unbox Γ) ∈ unmodal Γ := 
+begin dsimp [unmodal], apply list.mem_map_of_mem (λ φ, φ :: unbox Γ) h end
+
+def unsat_of_unsat_unmodal {Γ : list nnf} (h : modal_applicable Γ) (i) : i ∈ unmodal Γ ∧ unsatisfiable i → unsatisfiable Γ := 
+begin
+intro hex, intros st k s h,
+have := unmodal_sat_of_sat Γ i hex.1 k s Γ (λ x hx, hx) (λ x hx, hx) h,
+cases this with w hw,
+exact hex.2 _ k w hw
 end
 
 /- Regular lemmas for the propositional part. -/
@@ -179,14 +184,14 @@ by cases i; {apply unsat_or_of_unsat_split, repeat {assumption} }
 /- Tree models -/
 
 inductive model
-| leaf : list nat → model
-| cons : list nat → list model → model
+| leaf : list ℕ → model
+| cons : list ℕ → list model → model
 
 instance : decidable_eq model := by tactic.mk_dec_eq_instance
 
 open model
 
-@[simp] def mval : nat → model → bool
+@[simp] def mval : ℕ → model → bool
 | p (leaf v) := if p ∈ v then tt else ff
 | p (cons v r) := if p ∈ v then tt else ff
 
@@ -248,12 +253,12 @@ begin
   {dsimp, intros s' hs', have hmem := mem_of_mrel_tt hs', 
    have := bs_ex l (unmodal Γ) hbs s' hmem,
    rcases this with ⟨w, hw, hsat⟩,
-   have := ((unmodal Γ).2.1 w hw).2.1 ψ _,
+   have := unmodal_mem_box Γ w hw ψ _,
    swap, {rw ←hfml, exact hφ}, {apply hsat, exact this} },
   case nnf.dia : ψ 
   {dsimp, 
    have := bs_forall l (unmodal Γ) hbs (ψ :: unbox Γ) _, swap,
-   {apply ((unmodal Γ).2.2), rw ←undia_iff, rw ←hfml, exact hφ}, 
+   {apply mem_unmodal, rw ←undia_iff, rw ←hfml, exact hφ}, 
    {rcases this with ⟨w, hw, hsat⟩, split, swap, exact w, split, 
     {simp [hw]}, {apply hsat, simp} } },
   case nnf.neg : n

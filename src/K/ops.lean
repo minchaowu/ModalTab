@@ -6,20 +6,14 @@ universes u v w
 
 variables {α : Type u} {β : Type v} {γ : Type w}
 
--- fancy!
-@[simp] def smap (p : β → Prop) (f : α → β) : Π l : list α, (∀ a∈l, p (f a)) → 
-{x : list β // (∀ e ∈ x, p e) ∧ ∀ i ∈ l, f i ∈ x}
-| []         h := ⟨[], ⟨λ e h, by simpa using h, λ e h, by simpa using h⟩⟩
-| (hd :: tl) h := ⟨f hd :: smap tl (λ a ha, h a $ mem_cons_of_mem _ ha), 
+theorem mapp {p : β → Prop} (f : α → β) : Π (l : list α) (h : ∀ x∈l, p (f x)) x, x ∈ list.map f l → p x
+| [] h x := by simp
+| (hd::tl) h x := 
 begin
-  constructor,
-  { intros e he, cases he, 
-    {rw he, apply h, simp}, 
-    {apply (smap tl _).2.1, exact he} },
-  { intros e he, cases he, 
-    {rw he, simp},
-    {apply mem_cons_of_mem, apply (smap tl _).2.2, exact he} }
-end⟩
+intro hmem, cases hmem,
+{rw hmem, apply h, simp},
+{apply mapp tl, intros a ha, apply h, simp [ha], exact hmem}
+end
 
 @[simp] def ne_empty_head : Π l : list α, l ≠ [] → α
 | []       h := by contradiction

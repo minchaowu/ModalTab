@@ -182,15 +182,15 @@ begin
 end
 
 theorem modal_pmark {Γ} (h₁ : modal_applicable Γ) (i)
-(h₂ : i ∈ (unmodal Γ).1 ∧ unsatisfiable i): 
+(h₂ : i ∈ unmodal Γ ∧ unsatisfiable i): 
 pmark Γ (dia (list.head i) :: rebox (unbox Γ)) := 
 begin
   intro, intros hδ hsub, intro, intros, intro hsat,
-  have := ((unmodal Γ).2.1 i h₂.1).2.2.2.2 h₂.2,
+  have := unmodal_unsat_of_unsat Γ i h₂.1 h₂.2,
   apply this st k s,
   apply sat_subset _ _ _ _ _ hsat,
   intros φ h, apply mem_diff_of_mem,
-  {cases h, rw h, exact ((unmodal Γ).2.1 i h₂.1).2.2.2.1,
+  {cases h, rw h, exact unmodal_mem_head Γ i h₂.1,
    apply rebox_unbox_of_mem, {simp [unbox_iff]}, {exact h}},
   {intro, apply hδ, repeat {assumption} }
 end
