@@ -51,6 +51,8 @@ variables {a b c d : Prop}
 
 local attribute [instance] prop_decidable
 
+theorem not_not : ¬¬a ↔ a := not_not
+
 theorem not_and_distrib : ¬ (a ∧ b) ↔ ¬a ∨ ¬b :=
 ⟨λ h, if ha : a then or.inr (λ hb, h ⟨ha, hb⟩) else or.inl ha, not_and_of_not_or_not⟩
 
