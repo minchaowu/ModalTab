@@ -1,4 +1,4 @@
-import .topological_semantics
+import .topological_semantics ..K.semantics
 open nnf
 
 -- local attribute [instance] classical.prop_decidable
@@ -55,3 +55,4 @@ theorem unsat_topo_of_unsat {Γ : list nnf} : unsatisfiable Γ → topo_unsatisf
 
 def not_topo_force_of_unsat {φ} : unsatisfiable [φ] → ∀ (α) (tm : topo_model α) s, ¬ topo_force tm s φ := 
 λ h, topo_unsat_singleton $ unsat_topo_of_unsat h
+

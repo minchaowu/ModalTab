@@ -1,4 +1,4 @@
-import defs
+import .semantics
 
 inductive fml
 | var (n : nat)         

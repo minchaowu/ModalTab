@@ -50,38 +50,6 @@ instance inhabited_kripke : inhabited (kripke ℕ) :=
 
 open nnf
 
-/- This has a better computaional behaviour than a forcing relation defined explicitly as an inductive predicate. -/
-@[simp] def force {states : Type} (k : kripke states) : states → nnf → Prop
-| s (var n)    := k.val n s
-| s (neg n)    := ¬ k.val n s
-| s (and φ ψ)  := force s φ ∧ force s ψ
-| s (or φ ψ)   := force s φ ∨ force s ψ
-| s (box φ)    := ∀ s', k.rel s s' → force s' φ
-| s (dia φ)    := ∃ s', k.rel s s' ∧ force s' φ
-
-def sat {st} (k : kripke st) (s) (Γ : list nnf) : Prop := 
-∀ φ ∈ Γ, force k s φ
-
-def unsatisfiable (Γ : list nnf) : Prop := 
-∀ (st) (k : kripke st) s, ¬ sat k s Γ
-
-theorem unsat_singleton {φ} : unsatisfiable [φ] → ∀ (st) (k : kripke st) s, ¬ force k s φ
- := 
-begin
-  intro h, intros, intro hf, 
-  apply h, intros ψ hψ, rw list.mem_singleton at hψ, rw hψ, exact hf
-end
-
-theorem sat_of_empty {st} (k : kripke st) (s) : sat k s [] :=
-λ φ h, absurd h $ list.not_mem_nil _
-
-theorem ne_empty_of_unsat {Γ} (h : unsatisfiable Γ): Γ ≠ [] := 
-begin 
-  intro heq, rw heq at h, 
-  apply h, apply sat_of_empty, exact nat, 
-  apply inhabited_kripke.1, exact 0 
-end
-
 /- Do not use map -/
 @[simp] def node_size : list nnf → ℕ 
 | []          := 0
