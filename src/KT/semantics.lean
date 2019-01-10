@@ -1,57 +1,6 @@
 import .ops
 open subtype nnf
 
-structure KT (states : Type) extends kripke states :=
-(refl  : reflexive rel)
-
-instance inhabited_KT : inhabited (KT ℕ) := 
-⟨{ val := λ a b, tt, rel := λ a b, tt, refl := λ a, by simp }⟩
-
-@[simp] def force {states : Type} (k : KT states) : states → nnf → Prop
-| s (var n)    := k.val n s
-| s (neg n)    := ¬ k.val n s
-| s (and φ ψ)  := force s φ ∧ force s ψ
-| s (or φ ψ)   := force s φ ∨ force s ψ
-| s (box φ)    := ∀ s', k.rel s s' → force s' φ
-| s (dia φ)    := ∃ s', k.rel s s' ∧ force s' φ
-
-def sat {st} (k : KT st) (s) (Γ : list nnf) : Prop := 
-∀ φ ∈ Γ, force k s φ
-
-def unsatisfiable (Γ : list nnf) : Prop := 
-∀ (st) (k : KT st) s, ¬ sat k s Γ
-
-theorem unsat_singleton {φ} : unsatisfiable [φ] → ∀ (st) (k : KT st) s, ¬ force k s φ
- := 
-begin
-  intro h, intros, intro hf, 
-  apply h, intros ψ hψ, rw list.mem_singleton at hψ, rw hψ, exact hf
-end
-
-theorem sat_of_empty {st} (k : KT st) (s) : sat k s [] :=
-λ φ h, absurd h $ list.not_mem_nil _
-
-theorem ne_empty_of_unsat {Γ} (h : unsatisfiable Γ): Γ ≠ [] := 
-begin 
-  intro heq, rw heq at h, 
-  apply h, apply sat_of_empty, exact nat, 
-  apply inhabited_KT.1, exact 0 
-end
-
-class val_constructible (Γ : seqt) :=
-(satu : saturated Γ.main)
-(no_box_main : ∀ {φ}, box φ ∉ Γ.main)
-(no_contra_main : ∀ {n}, var n ∈ Γ.main → neg n ∉ Γ.main)
-(v : list ℕ)
-(hv : ∀ n, var n ∈ Γ.main ↔ n ∈ v)
-
-class modal_applicable (Γ : seqt) extends val_constructible Γ :=
-(φ : nnf)
-(ex : dia φ ∈ Γ.main)
-
-class model_constructible (Γ : seqt) extends val_constructible Γ :=
-(no_dia : ∀ {φ}, nnf.dia φ ∉ Γ.main)
-
 def unmodal_seqt (Γ : seqt) : list seqt :=
 list.map (λ d, {main := d :: (unbox (Γ.main ++ Γ.hdld)), hdld := []}) (undia (Γ.main ++ Γ.hdld))
 
@@ -59,7 +8,155 @@ def unmodal_seqt_size (Γ : seqt) : ∀ (i : seqt),  i ∈ unmodal_seqt Γ → (
 list.mapp _ _ 
 begin 
 intros φ h, dsimp, constructor, simp [-list.map_append], 
+apply undia_degree h
 end
+
+
+/- Regular lemmas for the propositional part. -/
+
+section
+variables (φ ψ : nnf) (Γ₁ Γ₂ Δ : list nnf) {st : Type}
+variables (k : KT st) (s : st)
+open list
+
+theorem sat_subset (h₁ : Γ₁ ⊆ Γ₂) (h₂ : sat k s Γ₂) : sat k s Γ₁ :=
+λ x hx, h₂ _ (h₁ hx)
+
+theorem sat_sublist (h₁ : Γ₁ <+ Γ₂) (h₂ :sat k s Γ₂) : sat k s Γ₁ := 
+sat_subset _ _ _ _ (subset_of_sublist h₁) h₂
+
+theorem unsat_contra  {Δ n} : var n ∈ Δ →  neg n ∈ Δ →  unsatisfiable Δ:= 
+begin
+  intros h₁ h₂, intros v hsat, intros s hsat,
+  have := hsat _ h₁, have := hsat _ h₂, simpa
+end
+
+theorem unsat_contra_seqt {Δ : seqt} {n} : var n ∈ Δ.main →  neg n ∈ Δ.main →  unsatisfiable (Δ.main ++ Δ.hdld):= 
+begin
+  intros h₁ h₂, intros st m, intros s hsat,
+  have := unsat_contra h₁ h₂,
+  have := this _ m s,
+  apply this,
+  apply sat_subset _ _ _ _ _ hsat, 
+  simp
+end
+
+theorem sat_of_and : force k s (and φ ψ) ↔ (force k s φ) ∧ (force k s ψ) := 
+by split; {intro, simpa}; {intro, simpa}
+
+theorem sat_of_sat_erase (h₁ : sat k s $ Δ.erase φ) (h₂ : force k s φ) : sat k s Δ := 
+begin
+  intro ψ, intro h,
+  by_cases (ψ = φ),
+  {rw h, assumption},
+  {have : ψ ∈ Δ.erase φ,
+   rw mem_erase_of_ne, assumption, exact h,
+   apply h₁, assumption}
+end
+
+theorem unsat_and_of_unsat_split 
+        (h₁ : and φ ψ ∈ Δ) 
+        (h₂ : unsatisfiable $ φ :: ψ :: Δ.erase (and φ ψ)) : 
+        unsatisfiable Δ :=
+begin
+  intro st, intros, intro h,
+  apply h₂, swap 3, exact k, swap, exact s,
+  intro e, intro he,
+  cases he,
+  {rw he, have := h _ h₁, rw sat_of_and at this, exact this.1},
+  {cases he, 
+    {rw he, have := h _ h₁, rw sat_of_and at this, exact this.2}, 
+    {have := h _ h₁, apply h, apply mem_of_mem_erase he} }
+end
+
+theorem unsat_and_of_unsat_split_seqt {Γ}
+        (h₁ : and φ ψ ∈ Δ) 
+        (h₂ : unsatisfiable $ (φ :: ψ :: Δ.erase (and φ ψ)++Γ)) : 
+        unsatisfiable (Δ++Γ) :=
+begin
+  intro st, intros, intro h,
+  apply h₂, swap 3, exact k, swap, exact s,
+  intro e, intro he,
+  cases he,
+  {rw he, have := h _ (mem_append_left _ h₁), rw sat_of_and at this, exact this.1},
+  {cases he, 
+    {rw he, have := h _ (mem_append_left _ h₁), rw sat_of_and at this, exact this.2},
+    {have := h _ (mem_append_left _ h₁), apply h, apply mem_of_mem_erase, rw erase_append_left, exact he, exact h₁} }
+end
+
+theorem sat_and_of_sat_split
+        (h₁ : and φ ψ ∈ Δ) 
+        (h₂ : sat k s $ φ :: ψ :: Δ.erase (and φ ψ)) : 
+        sat k s Δ := 
+begin
+  intro e, intro he,
+  by_cases (e = and φ ψ),
+  { rw h, dsimp, split, repeat {apply h₂, simp} },
+  { have : e ∈ Δ.erase (and φ ψ),
+      { rw mem_erase_of_ne, repeat { assumption } },
+    apply h₂, simp [this] }
+end
+
+theorem unsat_or_of_unsat_split_seqt {Γ}
+        (h : or φ ψ ∈ Δ) 
+        (h₁ : unsatisfiable $ (φ :: Δ.erase (nnf.or φ ψ)++Γ)) 
+        (h₂ : unsatisfiable $ (ψ :: Δ.erase (nnf.or φ ψ)++Γ)) : 
+        unsatisfiable $ (Δ++Γ) := 
+begin
+  intro, intros, intro hsat,
+  have := hsat _ h,
+  dsimp at this,
+  cases this,
+  {apply h₁, swap 3, exact k, swap, exact s, intro e, intro he, 
+   cases he, rw he, exact this, apply hsat, apply mem_of_mem_erase he},
+  {apply h₂, swap 3, exact k, swap, exact s, intro e, intro he, 
+   cases he, rw he, exact this, apply hsat, apply mem_of_mem_erase he}
+end
+
+theorem sat_or_of_sat_split_left 
+        (h : or φ ψ ∈ Δ) 
+        (hl : sat k s $ φ :: Δ.erase (nnf.or φ ψ)) :
+        sat k s Δ := 
+begin
+  intros e he,
+  by_cases (e = or φ ψ),
+  { rw h, dsimp, left, apply hl, simp},
+  {have : e ∈ Δ.erase (or φ ψ),
+     { rw mem_erase_of_ne, repeat { assumption } },
+   apply hl, simp [this]}
+end
+
+theorem sat_or_of_sat_split_right
+        (h : or φ ψ ∈ Δ) 
+        (hl : sat k s $ ψ :: Δ.erase (nnf.or φ ψ)) :
+        sat k s Δ := 
+begin
+  intros e he,
+  by_cases (e = or φ ψ),
+  { rw h, dsimp, right, apply hl, simp},
+  { have : e ∈ Δ.erase (or φ ψ),
+      { rw mem_erase_of_ne, repeat { assumption } },
+    apply hl, simp [this] }
+end
+
+end
+
+/- Part of the soundness -/
+
+theorem unsat_of_closed_and {Γ Δ} (i : and_instance Γ Δ) (h : unsatisfiable Δ) : unsatisfiable Γ := 
+by cases i; { apply unsat_and_of_unsat_split, repeat {assumption} }
+
+theorem unsat_of_closed_and_seqt {Γ Δ} (i : and_instance_seqt Γ Δ) (h : unsatisfiable (Δ.main++Δ.hdld)) : unsatisfiable (Γ.main++Γ.hdld) := 
+begin
+cases i,
+
+end
+
+#check unsat_and_of_unsat_split
+-- by cases i; { apply unsat_and_of_unsat_split, repeat {assumption} }
+
+-- theorem unsat_of_closed_or {Γ₁ Γ₂ Δ : list nnf} (i : or_instance Δ Γ₁ Γ₂) (h₁ : unsatisfiable Γ₁) (h₂ : unsatisfiable Γ₂) : unsatisfiable Δ :=
+-- by cases i; {apply unsat_or_of_unsat_split, repeat {assumption} }
 
 /- Tree models -/
 
@@ -119,3 +216,4 @@ begin
   {rcases this with ⟨w, hw, hsat⟩, split, swap, exact w, split, 
    {simp [hw]}, {exact hsat} } }
 end
+

@@ -77,7 +77,7 @@ all_goals
 end
 
 theorem zero_degree_of_eq_unbox : Π {Γ}, modal_degree (unbox Γ) = modal_degree Γ → modal_degree Γ = 0 
-| [] h := begin dsimp [list.max, modal_degree], reflexivity end
+| [] h := begin dsimp [maximum, modal_degree], reflexivity end
 | (hd::tl) h := 
 begin
 cases heq : hd,
@@ -216,4 +216,142 @@ begin
   rw ←undia_iff at h,
   apply unbox_degree h
 end
+
+def get_contra : Π Γ : list nnf, 
+                 psum {p : nat // var p ∈ Γ ∧ neg p ∈ Γ} 
+                      (∀ n, var n ∈ Γ → neg n ∉ Γ)
+| []             := psum.inr $ λ _ h, absurd h $ not_mem_nil _
+| (hd :: tl)     := 
+begin
+  cases h : hd,
+  case nnf.var : n 
+  {apply dite (neg n ∈ tl),
+    {intro t, 
+     exact psum.inl ⟨n, ⟨mem_cons_self _ _, mem_cons_of_mem _ t⟩⟩},
+    {intro e, 
+     cases (get_contra tl),
+     {left, constructor, constructor,
+     apply mem_cons_of_mem, exact val.2.1,
+     apply mem_cons_of_mem, exact val.2.2},
+     {right,
+      intros m hm hin, 
+      by_cases eq : m=n,
+      {apply e, cases hin, contradiction, rw ←eq, assumption},
+      {cases hm, apply eq, injection hm, apply val, exact hm, 
+       cases hin, contradiction, assumption} } }
+  },
+  case nnf.neg : n 
+  { apply dite (var n ∈ tl),
+    { intro t, 
+      exact psum.inl ⟨n, ⟨mem_cons_of_mem _ t, mem_cons_self _ _⟩⟩ },
+    { intro e, 
+      cases (get_contra tl),
+      {left, constructor, constructor,
+      apply mem_cons_of_mem, exact val.2.1,
+      apply mem_cons_of_mem, exact val.2.2 },
+      { right,
+        intros m hm hin, 
+        by_cases eq : m=n,
+        { apply e, cases hm, contradiction, rw ←eq, assumption },
+        { cases hin, apply eq, injection hin, apply val, 
+          swap, exact hin, cases hm, contradiction, assumption } 
+      } 
+    }
+  },
+  all_goals
+  { 
+  cases (get_contra tl),
+  { left, constructor, constructor,
+    apply mem_cons_of_mem, exact val.2.1,
+    apply mem_cons_of_mem, exact val.2.2  },
+  { right,
+    intros m hm hin, 
+    {apply val, swap 3, exact m, 
+    cases hm, contradiction, assumption,
+    cases hin, contradiction, assumption} }
+  }
+end
+
+def get_contra_seqt : Π Γ : seqt,
+                 psum {p : nat // var p ∈ Γ.main ∧ neg p ∈ Γ.main} 
+                      (∀ n, var n ∈ Γ.main → neg n ∉ Γ.main)
+:= λ Γ, get_contra Γ.main
+
+def get_and : Π Γ : list nnf, 
+              psum {p : nnf × nnf // and p.1 p.2 ∈ Γ} 
+                   (∀ φ ψ, nnf.and φ ψ ∉ Γ)
+| []               := psum.inr $ λ _ _, not_mem_nil _
+| (hd :: tl)       := 
+begin
+  cases h : hd,
+  case nnf.and : φ ψ { left, constructor,swap,
+                       constructor, exact φ, exact ψ, simp
+                     },
+  all_goals 
+  { cases (get_and tl),
+    {left,
+    constructor,
+    apply mem_cons_of_mem,
+    exact val.2},
+    {right, intros γ ψ h, 
+     cases h, contradiction,
+    apply val, assumption }
+  }
+end
+
+def get_and_seqt : Π Γ : seqt, 
+              psum {p : nnf × nnf // and p.1 p.2 ∈ Γ.main} 
+                   (∀ φ ψ, nnf.and φ ψ ∉ Γ.main)
+:= λ Γ, get_and Γ.main
+
+def get_or : Π Γ : list nnf, 
+              psum {p : nnf × nnf // or p.1 p.2 ∈ Γ} 
+                   (∀ φ ψ, nnf.or φ ψ ∉ Γ)
+| []               := psum.inr $ λ _ _, not_mem_nil _
+| (hd :: tl)       :=
+begin
+  cases h : hd,
+  case nnf.or : φ ψ { left, constructor,swap,
+                       constructor, exact φ, exact ψ, simp },
+  all_goals 
+  { cases (get_or tl),
+    {left,
+    constructor,
+    apply mem_cons_of_mem,
+    exact val.2},
+    {right, intros γ ψ h, 
+     cases h, contradiction,
+    apply val, assumption}
+  }
+end
+
+def get_or_seqt : Π Γ : seqt,
+              psum {p : nnf × nnf // or p.1 p.2 ∈ Γ.main} 
+                   (∀ φ ψ, nnf.or φ ψ ∉ Γ.main)
+:= λ Γ, get_or Γ.main
+
+def get_dia : Π Γ : list nnf, 
+              psum {p : nnf // dia p ∈ Γ} 
+                   (∀ φ, nnf.dia φ ∉ Γ)
+| []               := psum.inr $ λ _, not_mem_nil _
+| (hd :: tl)       := 
+begin
+  cases h : hd,
+  case nnf.dia : φ { left, constructor, swap, exact φ, simp },
+  all_goals 
+  { cases (get_dia tl),
+    {left,
+    constructor,
+    apply mem_cons_of_mem,
+    exact val.2},
+    {right, intros γ h, 
+     cases h, contradiction,
+     apply val, assumption } }
+end
+
+def get_dia_seqt : Π Γ : seqt,
+              psum {p : nnf // dia p ∈ Γ.main} 
+                   (∀ φ, nnf.dia φ ∉ Γ.main)
+:= λ Γ, get_dia Γ.main
+
 

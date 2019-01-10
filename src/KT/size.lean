@@ -1,4 +1,4 @@
-import defs
+import .KT_defs
 open nnf prod
 
 namespace prod
@@ -14,7 +14,7 @@ inv_image.wf f (lex_wf nat.lt_wf nat.lt_wf)
 end prod
 
 section
-
+-- replace these by mathlib lemmas
 universe u
 variables {α : Type u} [decidable_linear_order α]
 
@@ -51,56 +51,67 @@ namespace list
 universes u
 variables {α : Type u} [inhabited α] [decidable_linear_order α]
 
-def max (l : list α) : α := l.foldr max l.head
+def maximum (l : list α) : α := l.foldr max l.head
 
-theorem le_of_foldr_max : Π {a b : α} {l}, a ∈ l → a ≤ foldr _root_.max b l
+theorem le_of_foldr_max : Π {a b : α} {l}, a ∈ l → a ≤ foldr max b l
 | a b [] h := absurd h $ not_mem_nil _
-| a b (hd::tl) h := begin cases h, { simp [h, le_max_left] }, { simp [le_max_of_le_right, le_of_foldr_max h] } end
+| a b (hd::tl) h := 
+begin 
+  cases h, 
+  { simp [h, le_max_left] }, 
+  { simp [le_max_of_le_right, le_of_foldr_max h] } 
+end
 
-theorem mem_of_foldr_max : Π {a : α} {l}, foldr _root_.max a l ∈ a :: l
+theorem mem_of_foldr_max : Π {a : α} {l}, foldr max a l ∈ a :: l
 | a [] := by simp
 | a (hd::tl) := 
 begin
-simp only [foldr_cons],
-have h := by exact @or_of_max _ _ hd (foldr _root_.max a tl),
-cases h, {simp [h]}, 
-{rw h, have hmem := @mem_of_foldr_max a tl, cases hmem, {simp [hmem]}, {right, right, exact hmem}}
+  simp only [foldr_cons],
+  have h := by exact @or_of_max _ _ hd (foldr max a tl),
+  cases h, 
+  { simp [h] }, 
+  { rw h, 
+    have hmem := @mem_of_foldr_max a tl, 
+    cases hmem, { simp [hmem] }, { right, right, exact hmem } }
 end
 
-theorem mem_max : Π {l : list α}, l ≠ [] →  max l ∈ l
+theorem mem_maximum : Π {l : list α}, l ≠ [] →  maximum l ∈ l
 | [] h := by contradiction
 | (hd::tl) h := 
 begin
-dsimp [max],
-have hc := by exact @or_of_max _ _ hd (foldr _root_.max hd tl),
-cases hc, {simp [hc]}, {simp [hc, mem_of_foldr_max]}
+  dsimp [maximum],
+  have hc := by exact @or_of_max _ _ hd (foldr max hd tl),
+  cases hc, { simp [hc] }, { simp [hc, mem_of_foldr_max] }
 end
 
-theorem le_max_of_mem : Π {a : α} {l}, a ∈ l → a ≤ max l
+theorem le_maximum_of_mem : Π {a : α} {l}, a ∈ l → a ≤ maximum l
 | a [] h := absurd h $ not_mem_nil _
 | a (hd::tl) h := 
 begin
-cases h,
-{ rw h, apply le_of_foldr_max, simp },
-{ dsimp [max], apply le_max_of_le_right, apply le_of_foldr_max h }
+  cases h,
+  { rw h, apply le_of_foldr_max, simp },
+  { dsimp [maximum], apply le_max_of_le_right, apply le_of_foldr_max h }
 end
 
-def max_cons : Π {a : α} {l}, l ≠ [] → max (a :: l) = _root_.max a (max l)
+def maximum_cons : Π {a : α} {l}, l ≠ [] → maximum (a :: l) = max a (maximum l)
 | a [] h := by contradiction
 | a (hd::tl) h := 
 begin
-apply le_antisymm,
-{have : a :: hd :: tl ≠ [], {simp [h]},
-have hle := mem_max this, cases hle, {rw hle, apply le_max_left}, {apply le_max_of_le_right, apply le_max_of_mem, exact hle} },
-{have hc := by exact @or_of_max _ _ a (max $ hd :: tl),
-cases hc, {rw hc, apply le_max_of_mem, simp}, {rw hc, apply le_max_of_mem, right, apply mem_max h } }
+  apply le_antisymm,
+  { have : a :: hd :: tl ≠ [], { simp [h] },
+    have hle := mem_maximum this, 
+    cases hle, 
+    { rw hle, apply le_max_left }, 
+    { apply le_max_of_le_right, apply le_maximum_of_mem, exact hle } },
+  { have hc := by exact @or_of_max _ _ a (maximum $ hd :: tl),
+    cases hc, 
+    { rw hc, apply le_maximum_of_mem, simp }, 
+    { rw hc, apply le_maximum_of_mem, right, exact mem_maximum h } }
 end
 
 end list
 
-structure seqt : Type :=
-(main : list nnf)
-(hdld : list nnf) -- handled boxes
+open list
 
 @[simp] def count_modal : nnf → ℕ 
 | (var n)    := 0
@@ -110,12 +121,12 @@ structure seqt : Type :=
 | (box φ)    := count_modal φ + 1
 | (dia φ)    := count_modal φ + 1
 
-def modal_degree (Γ : list nnf) : ℕ := list.max $ Γ.map count_modal
+def modal_degree (Γ : list nnf) : ℕ := maximum $ Γ.map count_modal
 
 theorem cons_degree : Π (φ : nnf) (Γ : list nnf), 
 modal_degree (φ :: Γ) = max (count_modal φ) (modal_degree Γ) 
-| φ [] := begin dsimp [modal_degree, list.max], simp, rw max_eq_left, apply zero_le end
-| φ (hd::tl) := begin simp only [modal_degree], apply list.max_cons, simp end
+| φ [] := begin dsimp [modal_degree, maximum], simp, rw max_eq_left, apply zero_le end
+| φ (hd::tl) := begin simp only [modal_degree], apply maximum_cons, simp end
 
 theorem mem_degree : Π (φ : nnf) (Γ : list nnf), φ ∈ Γ → count_modal φ ≤ modal_degree Γ
 | φ [] h := absurd h $ list.not_mem_nil _
