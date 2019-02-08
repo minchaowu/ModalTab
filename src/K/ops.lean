@@ -88,7 +88,7 @@ begin
      {rw add_comm, apply unbox_size, exact h} } },
   all_goals 
   {dsimp, apply nat.lt_add_left, apply unbox_size, 
-  cases h, rw h₁ at h, contradiction, exact h}
+   cases h, rw h₁ at h, contradiction, exact h}
 end
 
 @[simp] def rebox : list nnf → list nnf 

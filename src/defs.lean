@@ -29,6 +29,21 @@ class saturated (Γ : list nnf) :=
 class box_only (Γ : list nnf) extends no_literals Γ, saturated Γ :=
 (no_dia : ∀ {φ}, nnf.dia φ ∉ Γ)
 
+def box_only_nil : box_only [] := 
+{no_var := λ n hn, absurd hn $ list.not_mem_nil _, 
+no_neg := λ n hn, absurd hn $ list.not_mem_nil _, 
+no_and := λ φ ψ hn, absurd hn $ list.not_mem_nil _, 
+no_or := λ φ ψ hn, absurd hn $ list.not_mem_nil _, 
+no_dia := λ n hn, absurd hn $ list.not_mem_nil _}
+
+def box_only_ex : Π {φ Γ} (h₁ : box_only Γ) (h₂ : φ ∈ Γ), ∃ ψ, φ = box ψ 
+| (var n) Γ h₁ h₂   := begin exfalso, apply h₁.no_var, exact h₂ end
+| (neg n) Γ h₁ h₂   := begin exfalso, apply h₁.no_neg, exact h₂ end
+| (and φ ψ) Γ h₁ h₂ := begin exfalso, apply h₁.no_and, exact h₂ end
+| (or φ ψ) Γ h₁ h₂  := begin exfalso, apply h₁.no_or, exact h₂ end
+| (box φ) Γ h₁ h₂   := ⟨φ, rfl⟩
+| (dia φ) Γ h₁ h₂   := begin exfalso, apply h₁.no_dia, exact h₂ end
+
 def nnf.to_string : nnf → string
 | (var n)    := "P" ++ n.repr
 | (neg n)    := "¬P" ++ n.repr
