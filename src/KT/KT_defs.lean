@@ -1,3 +1,9 @@
+/-
+Copyright (c) 2018-2019 Minchao Wu. All rights reserved.
+Released under MIT license as described in the file LICENSE.
+Author: Minchao Wu
+-/
+
 import defs
 open nnf tactic
 

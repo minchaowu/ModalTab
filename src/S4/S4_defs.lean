@@ -1,8 +1,21 @@
+/-
+Copyright (c) 2018-2019 Minchao Wu. All rights reserved.
+Released under MIT license as described in the file LICENSE.
+Author: Minchao Wu
+-/
+
 import defs
+open nnf tactic
+
+meta def frame_restriction : tactic unit :=
+do intro `a >> `[simp]
 
 structure S4 (states : Type) extends kripke states :=
-(refl  : reflexive rel)
-(trans : transitive rel)
+(refl  : reflexive rel . frame_restriction)
+(trans : transitive rel . frame_restriction)
+
+instance inhabited_S4 : inhabited (S4 ℕ) := 
+⟨{ val := λ a b, tt, rel := λ a b, tt }⟩
 
 inductive model
 | cons : list ℕ → list model → model
