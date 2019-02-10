@@ -164,7 +164,7 @@ begin
 end
 
 theorem sat_of_and : force k s (and φ ψ) ↔ (force k s φ) ∧ (force k s ψ) := 
-by split; {intro, simpa}; {intro, simpa}
+by split; {intro, simpa}
 
 theorem sat_of_sat_erase (h₁ : sat k s $ Δ.erase φ) (h₂ : force k s φ) : sat k s Δ := 
 begin
