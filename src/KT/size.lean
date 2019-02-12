@@ -13,15 +13,6 @@ inv_image.wf f (lex_wf nat.lt_wf nat.lt_wf)
 
 end prod
 
-section
-universe u
-variables {α : Type u} [decidable_linear_order α]
-
-lemma max_lt_of_lt {a b c d : α} (h₁ : a < c) (h₂ : b < d) : max a b < max c d :=
-begin apply max_lt, repeat { simp [lt_max_iff, h₁, h₂] } end
-
-end
-
 namespace list
 universes u
 variables {α : Type u} [inhabited α] [decidable_linear_order α]

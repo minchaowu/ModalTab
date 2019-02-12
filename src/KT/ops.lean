@@ -86,7 +86,7 @@ begin
   have := @le_of_unbox_degree tl, 
   cases (lt_or_eq_of_le this) with h₁ h₂,
   {have hne : max (count_modal ψ) (modal_degree (unbox tl)) ≠ max (count_modal (box ψ)) (modal_degree tl), 
-    { apply ne_of_lt, apply max_lt_of_lt, {simp, exact dec_trivial}, {exact h₁} },
+    { apply ne_of_lt, apply max_lt_max, {simp, exact dec_trivial}, {exact h₁} },
   contradiction },
   {rw [h₂, zero_degree_of_eq_unbox h₂] at h, 
   have : max (count_modal ψ) 0 < max (count_modal (box ψ)) 0,
@@ -155,7 +155,7 @@ begin
   cases heq : hd,
   case nnf.box : ψ 
   {dsimp, rw cons_degree, rw cons_degree,
-  apply max_lt_of_lt, 
+  apply max_lt_max, 
   { simp, exact dec_trivial }, 
   { apply unbox_degree_aux, swap, exact φ, 
     cases h, {rw heq at h, contradiction}, {exact h} } },
