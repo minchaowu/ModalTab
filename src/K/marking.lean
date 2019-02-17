@@ -4,45 +4,64 @@ open nnf subtype list
 
 def pmark (Γ m : list nnf) := ∀ Δ, (∀ δ ∈ Δ, δ ∉ m) → Δ <+ Γ → unsatisfiable (list.diff Γ Δ)
 
-@[simp] def mark : nnf → list nnf → list nnf
+@[simp] def mark_and : nnf → list nnf → list nnf
 | (nnf.and φ ψ) m := if φ ∈ m ∨ ψ ∈ m then nnf.and φ ψ :: m else
                      m
-| (nnf.or φ ψ) m  := if φ ∈ m ∨ ψ ∈ m then nnf.or φ ψ :: m else
-                     m
-| φ m             := m
+| _ m := m
 
-theorem subset_mark : Π {φ Γ}, Γ ⊆ mark φ Γ
-| (var n) Γ := by dsimp [mark]; reflexivity
-| (neg n) Γ := by dsimp [mark]; reflexivity
-| (and φ ψ) Γ := begin 
-                   dsimp [mark], 
-                   by_cases φ ∈ Γ ∨ ψ ∈ Γ, 
-                   {rw if_pos h, apply subset_cons},
-                   {rw if_neg h, reflexivity}
-                 end 
-| (or φ ψ) Γ := begin
-                  dsimp [mark], 
-                  by_cases φ ∈ Γ ∨ ψ ∈ Γ, 
-                  {rw if_pos h, apply subset_cons},
-                  {rw if_neg h, reflexivity}
-                end
-| (box φ) Γ := by dsimp [mark]; reflexivity
-| (dia φ) Γ := by dsimp [mark]; reflexivity
+@[simp] def mark_or : nnf → list nnf → list nnf → list nnf
+| (nnf.or φ ψ) ml mr:= if φ ∈ ml ∨ ψ ∈ mr then nnf.or φ ψ :: (ml++mr) else ml ++ mr
+| _ ml mr := ml ++ mr
+
+theorem subset_mark_and {φ Γ} : Γ ⊆ mark_and φ Γ :=
+begin
+cases heq : φ,
+case nnf.and : ψ₁ ψ₂ 
+{ dsimp, 
+  by_cases ψ₁ ∈ Γ ∨ ψ₂ ∈ Γ, 
+  {rw if_pos h, simp},
+  {rw if_neg h, simp} },
+all_goals {simp}
+end
+
+theorem subset_mark_or_left {φ Γ₁ Γ₂} : Γ₁ ⊆ mark_or φ Γ₁ Γ₂:=
+begin
+cases heq : φ,
+case nnf.or : ψ₁ ψ₂ 
+{ dsimp, 
+  by_cases ψ₁ ∈ Γ₁ ∨ ψ₂ ∈ Γ₂, 
+  {rw if_pos h, rw ←cons_append, 
+   apply subset_app_of_subset_left, simp},
+  {rw if_neg h, simp} },
+all_goals {simp}
+end
+
+theorem subset_mark_or_right {φ Γ₁ Γ₂} : Γ₂ ⊆ mark_or φ Γ₁ Γ₂:=
+begin
+cases heq : φ,
+case nnf.or : ψ₁ ψ₂ 
+{ dsimp, 
+  by_cases ψ₁ ∈ Γ₁ ∨ ψ₂ ∈ Γ₂, 
+  {rw if_pos h, rw ←cons_append, 
+   apply subset_app_of_subset_right, simp},
+  {rw if_neg h, simp} },
+all_goals {simp}
+end
 
 def pmark_of_closed_and {Γ Δ} (i : and_instance Γ Δ) (m) (h : unsatisfiable Δ) (p : pmark Δ m) : {x // pmark Γ x} := 
 begin
   cases i with φ ψ hin, split, swap,
-  {exact mark (and φ ψ) m},
+  {exact mark_and (and φ ψ) m},
   { intros Δ' hΔ hsub,
     by_cases hm : φ ∈ m ∨ ψ ∈ m,
    -- pos hm
     { cases hm,
       -- left hm
-      { have marked : nnf.and φ ψ ∈ mark (nnf.and φ ψ) m,
+      { have marked : nnf.and φ ψ ∈ mark_and (nnf.and φ ψ) m,
           {simp [mem_cons_self, hm] },
         have : unsatisfiable (list.diff (φ :: ψ :: list.erase Γ (and φ ψ)) Δ'),
           {apply p, 
-           {intros δ hδ hmem, apply hΔ _ hδ, apply subset_mark hmem}, 
+           {intros δ hδ hmem, apply hΔ _ hδ, apply subset_mark_and hmem}, 
            have : Δ'.erase (and φ ψ) <+ φ :: ψ :: list.erase Γ (and φ ψ),
              {apply sublist.cons, apply sublist.cons, apply erase_sublist_erase _ hsub},
            have hnin: and φ ψ ∉ Δ',
@@ -62,11 +81,11 @@ begin
            apply hsat, apply hsubd, exact hin'},
         apply this, exact hsat }, 
       -- right hm
-      { have marked : nnf.and φ ψ ∈ mark (nnf.and φ ψ) m,
+      { have marked : nnf.and φ ψ ∈ mark_and (nnf.and φ ψ) m,
          { simp [mem_cons_self, hm] },
         have : unsatisfiable (list.diff (φ :: ψ :: list.erase Γ (and φ ψ)) Δ'),
           {apply p, 
-           {intros δ hδ hmem, apply hΔ _ hδ, apply subset_mark hmem}, 
+           {intros δ hδ hmem, apply hΔ _ hδ, apply subset_mark_and hmem}, 
           have : Δ'.erase (and φ ψ) <+ φ :: ψ :: list.erase Γ (and φ ψ),
             {apply sublist.cons, apply sublist.cons, apply erase_sublist_erase, exact hsub},
           have hnin: and φ ψ ∉ Δ',
@@ -90,7 +109,7 @@ begin
        {apply p, intros δ hδ hdin, rcases hδ with eq₁ | eq₂ | hmem, 
          {apply hm, left, rw ←eq₁, exact hdin},
          {apply hm, right, rw ←eq₂, exact hdin},
-         {apply hΔ, apply erase_subset _ _ hmem, apply subset_mark hdin},
+         {apply hΔ, apply erase_subset _ _ hmem, apply subset_mark_and hdin},
         apply sublist.cons2, apply sublist.cons2, apply erase_sublist_erase _ hsub },
      intro, intros, intro hsat, apply this, simp, 
      apply sat_sublist, apply erase_diff_erase_sublist_of_sublist hsub, exact hsat } }
@@ -112,12 +131,12 @@ def pmark_of_jump {Γ₁ Γ₂ Δ : list nnf} (i : or_instance Δ Γ₁ Γ₂)
 (h₃ : left_prcp i ∉ m) : {x // pmark Δ x} := 
 begin
   cases i with φ ψ hin,
-  split, swap, {exact mark (or φ ψ) m},
+  split, swap, {exact mark_or (or φ ψ) m []},
   { intros Δ' hΔ' hsub,
     have : unsatisfiable (list.diff (φ :: Δ.erase (or φ ψ)) (φ :: Δ'.erase (or φ ψ))),
       { apply h₂, intros, intro hmem, rcases H with eq | hin,
         {apply h₃, simpa [eq] using hmem},
-        {apply hΔ' δ, apply erase_subset _ _ hin, apply subset_mark hmem},
+        {apply hΔ' δ, apply erase_subset _ _ hin, apply subset_mark_or_left hmem},
       apply sublist.cons2, apply erase_sublist_erase _ hsub },
     intro, intros, intro hsat,
     apply this st k s, simp, apply sat_sublist, apply erase_diff_erase_sublist_of_sublist, exact hsub, exact hsat }
@@ -127,25 +146,22 @@ def pmark_of_closed_or {Γ₁ Γ₂ Δ : list nnf} {m₁ m₂ : list nnf} (i : o
 (h₂ : unsatisfiable Γ₂) (p₂ : pmark Γ₂ m₂) : {x // pmark Δ x} :=
 begin
   cases i with φ ψ hin, split, swap,
-  {exact mark (or φ ψ) (m₁ ++ m₂)},
-  { intros Δ' hΔ hsub,
+  {exact mark_or (or φ ψ) m₁ m₂},
+  {intros Δ' hΔ hsub,
     by_cases hmφ : φ ∈ m₁,
-    {by_cases hmψ : ψ ∈ m₂,
-     have marked : or φ ψ ∈ mark (or φ ψ) (m₁++m₂),
-      {dsimp [mark], rw if_pos, apply mem_cons_self,
-       left, rw mem_append, left, exact hmφ},
-     have hnin: or φ ψ ∉ Δ',
-       {intro, apply hΔ _ a marked},
-     -- both marked
-     { have hl : unsatisfiable (list.diff (φ :: list.erase Δ (or φ ψ)) Δ'),
-         {apply p₁, 
-         {intros δ hδ hin, apply hΔ, exact hδ, apply subset_mark, rw mem_append, left, exact hin}, 
-         have : Δ'.erase (or φ ψ) <+ φ :: list.erase Δ (or φ ψ),
-           {apply sublist.cons, apply erase_sublist_erase, exact hsub},
-         rw ←erase_of_not_mem hnin, exact this},
+    { have marked : or φ ψ ∈ mark_or (or φ ψ) m₁ m₂,
+        {simp [hmφ]},
+      have hnin: or φ ψ ∉ Δ',
+        {intro, apply hΔ _ a marked},
+      have hl : unsatisfiable (list.diff (φ :: list.erase Δ (or φ ψ)) Δ'),
+        {apply p₁, 
+        {intros δ hδ hin, apply hΔ, exact hδ, apply subset_mark_or_left, exact hin}, 
+        have : Δ'.erase (or φ ψ) <+ φ :: list.erase Δ (or φ ψ),
+          {apply sublist.cons, apply erase_sublist_erase, exact hsub},
+        rw ←erase_of_not_mem hnin, exact this},
       have hr : unsatisfiable (list.diff (ψ :: list.erase Δ (or φ ψ)) Δ'),
         {apply p₂, 
-        {intros δ hδ hin, apply hΔ, exact hδ, apply subset_mark, rw mem_append, right, exact hin}, 
+        {intros δ hδ hin, apply hΔ, exact hδ, apply subset_mark_or_right, exact hin}, 
         have : Δ'.erase (or φ ψ) <+ ψ :: list.erase Δ (or φ ψ),
           {apply sublist.cons, apply erase_sublist_erase, exact hsub},
         rw ←erase_of_not_mem hnin, exact this},
@@ -154,31 +170,74 @@ begin
         {apply mem_diff_of_mem hin hnin},
       have hforce := hsat _ this, dsimp at hforce,
       cases hforce with l r,
-      {apply hl st k s, apply sat_subset, apply subset_of_subperm, apply subperm_cons_diff, intros x hx, cases hx, rw hx, exact l, apply hsat, 
-       have hsubd : list.diff (list.erase Δ (or φ ψ)) Δ' ⊆ list.diff Δ Δ',
-         {apply subset_of_sublist, apply diff_sublist_of_sublist, apply erase_sublist},
-       apply hsubd hx},
-      {apply hr st k s, apply sat_subset, apply subset_of_subperm, apply subperm_cons_diff, intros x hx, cases hx, rw hx, exact r, apply hsat, 
-       have hsubd : list.diff (list.erase Δ (or φ ψ)) Δ' ⊆ list.diff Δ Δ',
-         {apply subset_of_sublist, apply diff_sublist_of_sublist, apply erase_sublist},
-       apply hsubd hx} }, 
-  -- marked φ, unmarked ψ 
-     { have : unsatisfiable (list.diff (ψ :: Δ.erase (or φ ψ)) (ψ :: Δ'.erase (or φ ψ))),
-         {apply p₂, intros, intro hmem, rcases H with eq | hin,
-          {apply hmψ, rw ←eq, exact hmem},
-          {apply hΔ δ, apply erase_subset _ _ hin, apply subset_mark, rw mem_append, right, exact hmem},
-          apply sublist.cons2, apply erase_sublist_erase _ hsub},
-      intro, intros, intro hsat, apply this st k s, simp,
-      apply sat_sublist, apply erase_diff_erase_sublist_of_sublist hsub, exact hsat } },
-  -- unmarked φ
-    { have : unsatisfiable (list.diff (φ :: Δ.erase (or φ ψ)) (φ :: Δ'.erase (or φ ψ))),
-        {apply p₁, intros, intro hmem, rcases H with eq | hin,
-         {apply hmφ, rw ←eq, exact hmem},
-         {apply hΔ δ, apply erase_subset _ _ hin, apply subset_mark, rw mem_append, left, exact hmem},
-         apply sublist.cons2, apply erase_sublist_erase _ hsub},
-      intro, intros, intro hsat, 
-      apply this st k s, simp, apply sat_sublist, 
-      apply erase_diff_erase_sublist_of_sublist hsub, exact hsat } }
+      { apply hl st k s, 
+        apply sat_subset, 
+        apply subset_of_subperm, 
+        apply subperm_cons_diff, 
+        intros x hx, 
+        cases hx, rw hx, exact l, apply hsat,
+        have hsubd : list.diff (list.erase Δ (or φ ψ)) Δ' ⊆ list.diff Δ Δ',
+          {apply subset_of_sublist, apply diff_sublist_of_sublist, apply erase_sublist},
+        apply hsubd hx },
+      { apply hr st k s, 
+        apply sat_subset, 
+        apply subset_of_subperm, 
+        apply subperm_cons_diff, 
+        intros x hx, 
+        cases hx, rw hx, exact r, apply hsat,
+        have hsubd : list.diff (list.erase Δ (or φ ψ)) Δ' ⊆ list.diff Δ Δ',
+          {apply subset_of_sublist, apply diff_sublist_of_sublist, apply erase_sublist},
+        apply hsubd hx } },
+{by_cases hmψ : ψ ∈ m₂, 
+ -- marked ψ
+ { have marked : or φ ψ ∈ mark_or (or φ ψ) m₁ m₂,
+     {simp [hmψ]},
+   have hnin: or φ ψ ∉ Δ',
+     {intro, apply hΔ _ a marked},
+   have hl : unsatisfiable (list.diff (φ :: list.erase Δ (or φ ψ)) Δ'),
+     {apply p₁, 
+     {intros δ hδ hin, apply hΔ, exact hδ, apply subset_mark_or_left, exact hin}, 
+     have : Δ'.erase (or φ ψ) <+ φ :: list.erase Δ (or φ ψ),
+       {apply sublist.cons, apply erase_sublist_erase, exact hsub},
+     rw ←erase_of_not_mem hnin, exact this},
+   have hr : unsatisfiable (list.diff (ψ :: list.erase Δ (or φ ψ)) Δ'),
+     {apply p₂, 
+     {intros δ hδ hin, apply hΔ, exact hδ, apply subset_mark_or_right, exact hin}, 
+     have : Δ'.erase (or φ ψ) <+ ψ :: list.erase Δ (or φ ψ),
+       {apply sublist.cons, apply erase_sublist_erase, exact hsub},
+     rw ←erase_of_not_mem hnin, exact this},
+   intro, intros, intro hsat,
+   have : or φ ψ ∈ list.diff Δ Δ',
+     {apply mem_diff_of_mem hin hnin},
+   have hforce := hsat _ this, dsimp at hforce,
+   cases hforce with l r,
+   { apply hl st k s, 
+     apply sat_subset, 
+     apply subset_of_subperm, 
+     apply subperm_cons_diff, 
+     intros x hx, 
+     cases hx, rw hx, exact l, apply hsat,
+     have hsubd : list.diff (list.erase Δ (or φ ψ)) Δ' ⊆ list.diff Δ Δ',
+       {apply subset_of_sublist, apply diff_sublist_of_sublist, apply erase_sublist},
+     apply hsubd hx },
+   { apply hr st k s, 
+     apply sat_subset, 
+     apply subset_of_subperm, 
+     apply subperm_cons_diff, 
+     intros x hx, 
+     cases hx, rw hx, exact r, apply hsat,
+     have hsubd : list.diff (list.erase Δ (or φ ψ)) Δ' ⊆ list.diff Δ Δ',
+       {apply subset_of_sublist, apply diff_sublist_of_sublist, apply erase_sublist},
+     apply hsubd hx } },
+-- both unmarked
+ { have : unsatisfiable (list.diff (φ :: Δ.erase (or φ ψ)) (φ :: Δ'.erase (or φ ψ))),
+     {apply p₁, intros, intro hmem, rcases H with eq | hin,
+      {apply hmφ, rw ←eq, exact hmem},
+      {apply hΔ δ, apply erase_subset _ _ hin, apply subset_mark_or_left, exact hmem},
+      apply sublist.cons2, apply erase_sublist_erase _ hsub},
+   intro, intros, intro hsat, 
+   apply this st k s, simp, apply sat_sublist, 
+   apply erase_diff_erase_sublist_of_sublist hsub, exact hsat } } }
 end
 
 theorem modal_pmark {Γ} (h₁ : modal_applicable Γ) (i)
