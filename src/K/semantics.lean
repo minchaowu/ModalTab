@@ -136,8 +136,6 @@ by_cases heq : hd = a,
  {simp [heq], apply subset_of_diff_filter}
 end
 
--- a :: (l₁.diff l₂) | a :: (l₁.diff (filter (≠ a) l₂)) 
-
 end list
 
 
