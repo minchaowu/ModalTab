@@ -52,9 +52,9 @@ match get_contra Γ with
       match l with
       | inl w := begin 
                    left, 
-                   {exact unsat_of_unsat_unmodal ma w.1 w.2},
-                   swap, {exact dia (list.head w.1) :: rebox (unbox Γ)}, 
-                   { exact modal_pmark ma w.1 w.2, }
+                   {exact unsat_of_unsat_unmodal ma w.1.1 ⟨w.2.1, w.2.2.1⟩},
+                   swap, {exact mark_modal Γ w.1.1 w.1.2}, 
+                   { exact modal_pmark ma w.1.1 w.1.2 ⟨w.2.1, w.2.2.1⟩ w.2.2.2 }
                  end
       | inr w := begin 
                    right, split, 

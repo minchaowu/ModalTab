@@ -1,4 +1,4 @@
-import .size
+import .size data.list.perm
 open nnf list
 
 namespace list
@@ -25,6 +25,70 @@ end list
 | [] := []
 | ((box φ) :: l) := φ :: unbox l
 | (e :: l) := unbox l
+
+theorem unbox_sublist_cons {Γ : list nnf} {φ} : unbox Γ <+ unbox (φ :: Γ) :=
+begin cases heq : φ, all_goals {simp} end
+
+theorem unbox_sublist : Π {Γ₁ Γ₂ : list nnf} (h : Γ₁ <+ Γ₂), 
+unbox Γ₁ <+ unbox Γ₂
+| [] Γ₂ h := by simp
+| (hd::tl) [] h := by have := eq_nil_of_sublist_nil h; contradiction
+| (hd₁::tl₁) (hd₂::tl₂) h := 
+begin
+cases h with _ _ _ c₁ _ _ _ c₂,
+{have := unbox_sublist c₁, 
+ apply sublist.trans this, 
+ apply unbox_sublist_cons},
+{have := unbox_sublist c₂, 
+ cases heq : hd₁,
+ case nnf.box : ψ {simp, apply sublist.cons2, exact this}, 
+ all_goals {simp, exact this} }
+end
+
+theorem unbox_erase : Π {Γ : list nnf} {φ},
+(unbox Γ).erase φ = unbox (Γ.erase (box φ))
+| [] φ := by simp
+| (hd::tl) φ := 
+begin
+cases heq : hd,
+case nnf.box : ψ 
+{simp, 
+ by_cases hφ : ψ = φ,
+ {rw hφ, simp},
+ {rw erase_cons_tail, rw erase_cons_tail, simp, apply unbox_erase, intro hbe, simp at hbe, apply hφ hbe, exact hφ}},
+all_goals { simp, rw unbox_erase }
+end 
+
+theorem unbox_erase_of_ne_box : Π {Γ : list nnf} {φ : nnf} (h : ∀ ψ, φ ≠ box ψ), unbox (Γ.erase φ) = unbox Γ
+| [] φ h := by simp
+| (hd::tl) φ h := 
+begin
+cases heq : hd,
+case nnf.box : ψ 
+{simp, 
+ by_cases hφ : φ = box ψ,
+ {exfalso, apply h _ hφ},
+ {rw erase_cons_tail, simp, apply unbox_erase_of_ne_box, exact h, intro, rw a at hφ, contradiction} },
+all_goals 
+{simp, 
+ by_cases hφ : φ = hd,
+ {rw hφ, rw heq, simp},
+ {rw heq at hφ, rw erase_cons_tail, simp, apply unbox_erase_of_ne_box, exact h, intro, rw a at hφ, contradiction} }
+end
+
+theorem unbox_diff : Π {Γ₁ Γ₂ : list nnf}, 
+(unbox Γ₂).diff (unbox Γ₁) = unbox (Γ₂.diff Γ₁) 
+| [] Γ₂ := by simp
+| (hd::tl) Γ₂ := 
+begin
+cases heq : hd,
+case nnf.box : ψ { simp, rw ←unbox_diff, rw unbox_erase },
+all_goals 
+{by_cases hin : hd ∈ Γ₂,
+ {simp, have := @unbox_diff tl (Γ₂.erase hd),
+  rw ←heq, rw ←this, rw unbox_erase_of_ne_box, intro, intro, rw heq at a, contradiction},
+{simp, rw ←heq, rw erase_of_not_mem hin, apply unbox_diff}}
+end
 
 theorem unbox_iff : Π {Γ φ}, box φ ∈ Γ ↔ φ ∈ unbox Γ
 | [] φ := begin split, repeat {intro h, simpa using h} end

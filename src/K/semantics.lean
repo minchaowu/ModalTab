@@ -101,6 +101,46 @@ cases this with w hw,
 exact hex.2 _ k w hw
 end
 
+namespace list
+universes u v w x
+variables {α : Type u} {β : Type v} {γ : Type w} {δ : Type x}
+
+theorem cons_diff_of_ne_mem [decidable_eq α] {a : α} : Π {l₁ l₂ : list α} (h : a ∉ l₂), (a::l₁).diff l₂ = a :: l₁.diff l₂
+| l₁ [] h := by simp
+| l₁ (hd::tl) h := 
+begin
+simp,
+rw erase_cons_tail,
+apply cons_diff_of_ne_mem, 
+{intro hin, apply h, simp [hin]},
+{intro heq, apply h, simp [heq]}
+end
+
+-- TODO: Can we strengthen this?
+theorem subset_of_diff_filter [decidable_eq α] {a : α} : Π {l₁ l₂ : list α}, l₁.diff (filter (≠ a) l₂) ⊆ a :: l₁.diff l₂
+| l₁ [] := by simp
+| l₁ (hd::tl) := 
+begin
+by_cases heq : hd = a,
+{rw heq, simp, 
+ by_cases ha : a ∈ l₁,
+ {have hsub₁ := @subset_of_diff_filter l₁ tl,
+  have hsp := @subperm_cons_diff _ _ a (l₁.erase a) tl,
+  have hsub₂ := subset_of_subperm hsp,
+  have hsub := (perm_subset (perm_diff_left tl (perm_erase ha))),
+  intros x hx,
+  cases hsub₁ hx with hxa,
+  {left, exact hxa},
+  {exact hsub₂ (hsub h)}},
+  {rw erase_of_not_mem ha, apply subset_of_diff_filter}},
+ {simp [heq], apply subset_of_diff_filter}
+end
+
+-- a :: (l₁.diff l₂) | a :: (l₁.diff (filter (≠ a) l₂)) 
+
+end list
+
+
 /- Regular lemmas for the propositional part. -/
 
 section
@@ -111,8 +151,14 @@ open list
 theorem sat_subset (h₁ : Γ₁ ⊆ Γ₂) (h₂ : sat k s Γ₂) : sat k s Γ₁ :=
 λ x hx, h₂ _ (h₁ hx)
 
+theorem unsat_subset (h₁ : Γ₁ ⊆ Γ₂) (h₂ : unsatisfiable Γ₁) : unsatisfiable Γ₂ :=
+λ st k s h, (h₂ st k s (sat_subset _ Γ₂ _ _ h₁ h))
+
 theorem sat_sublist (h₁ : Γ₁ <+ Γ₂) (h₂ :sat k s Γ₂) : sat k s Γ₁ := 
 sat_subset _ _ _ _ (subset_of_sublist h₁) h₂
+
+theorem unsat_sublist (h₁ : Γ₁ <+ Γ₂) (h₂ : unsatisfiable Γ₁) : unsatisfiable Γ₂ :=
+λ st k s h, (h₂ st k s (sat_sublist _ Γ₂ _ _ h₁ h))
 
 theorem unsat_contra  {Δ n} : var n ∈ Δ →  neg n ∈ Δ →  unsatisfiable Δ:= 
 begin
@@ -203,6 +249,30 @@ begin
     apply hl, simp [this] }
 end
 
+end
+
+def unmodal_jump (Γ : list nnf) : ∀ (i : list nnf),  i ∈ unmodal Γ → Π Δ st (k : kripke st) s 
+(hsat : sat k s (Γ.diff Δ)) (hdia : dia i.head ∉ Δ), 
+∃ s, sat k s (i.diff (list.filter (≠ i.head) (unbox Δ))) := 
+list.mapp _ _
+begin
+intros x hx Δ st k s hsat hdia,
+rw list.cons_diff_of_ne_mem, swap,
+{intro hmem, rw [list.mem_filter] at hmem, have := hmem.2, 
+ simp at this, exact this},
+{ rw [←undia_iff] at hx,
+  have := hsat _ (list.mem_diff_of_mem hx hdia),
+  rcases this with ⟨w, hw⟩,
+  split, swap, {exact w},
+  { apply sat_subset, swap 3,
+   { exact x::list.diff (unbox Γ) (unbox Δ) },
+   { intros b hb, cases hb, 
+    { simp [hb] },
+    { apply list.subset_of_diff_filter, exact hb } },
+   { rw unbox_diff, intros c hc, cases hc,
+     {rw hc, exact hw.2},
+     {have := (@unbox_iff (list.diff Γ Δ) c).2 hc, 
+      have hforce := hsat _ this, apply hforce, exact hw.1} } } }
 end
 
 /- Part of the soundness -/

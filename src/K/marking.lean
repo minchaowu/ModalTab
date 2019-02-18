@@ -1,8 +1,8 @@
-import .semantics data.list.perm
+import .semantics
 
 open nnf subtype list
 
-def pmark (Γ m : list nnf) := ∀ Δ, (∀ δ ∈ Δ, δ ∉ m) → Δ <+ Γ → unsatisfiable (list.diff Γ Δ)
+def pmark (Γ m : list nnf) := ∀ Δ, (∀ δ ∈ Δ, δ ∉ m) → Δ <+ Γ → unsatisfiable (list.diff Γ Δ) 
 
 @[simp] def mark_and : nnf → list nnf → list nnf
 | (nnf.and φ ψ) m := if φ ∈ m ∨ ψ ∈ m then nnf.and φ ψ :: m else
@@ -12,6 +12,30 @@ def pmark (Γ m : list nnf) := ∀ Δ, (∀ δ ∈ Δ, δ ∉ m) → Δ <+ Γ �
 @[simp] def mark_or : nnf → list nnf → list nnf → list nnf
 | (nnf.or φ ψ) ml mr:= if φ ∈ ml ∨ ψ ∈ mr then nnf.or φ ψ :: (ml++mr) else ml ++ mr
 | _ ml mr := ml ++ mr
+
+@[simp] def mark_modal (Γ i m : list nnf) : list nnf := 
+dia i.head :: rebox (i.tail ∩ m)
+
+namespace list
+universes u v w x
+variables {α : Type u} {β : Type v} {γ : Type w} {δ : Type x}
+
+theorem mem_tail_of_ne_head [inhabited α] {a : α} : Π {l : list α}, a ∈ l → a ≠ l.head → a ∈ l.tail 
+| [] h₁ h₂ := absurd h₁ $ not_mem_nil _
+| (hd::tl) h₁ h₂ := by cases h₁; {simpa}
+
+end list
+
+theorem box_mem_of_mark_modal {φ} (Γ i m : list nnf) (h₁ : φ ∈ m) (h₂ : φ ∈ i) : 
+φ = i.head ∨ box φ ∈ mark_modal Γ i m := 
+begin
+simp,
+by_cases h : φ = i.head,
+{left, exact h},
+{right, rw rebox_iff, simp, split, 
+ {apply list.mem_tail_of_ne_head h₂ h}, 
+ {exact h₁} } 
+end
 
 theorem subset_mark_and {φ Γ} : Γ ⊆ mark_and φ Γ :=
 begin
@@ -23,6 +47,10 @@ case nnf.and : ψ₁ ψ₂
   {rw if_neg h, simp} },
 all_goals {simp}
 end
+
+theorem unsat_mark_and {φ Γ} (h : unsatisfiable Γ) : 
+unsatisfiable (mark_and φ Γ) :=
+begin apply unsat_subset, apply subset_mark_and, exact h end
 
 theorem subset_mark_or_left {φ Γ₁ Γ₂} : Γ₁ ⊆ mark_or φ Γ₁ Γ₂:=
 begin
@@ -47,6 +75,14 @@ case nnf.or : ψ₁ ψ₂
   {rw if_neg h, simp} },
 all_goals {simp}
 end
+
+theorem unsat_mark_or_left {φ Γ₁ Γ₂} (h : unsatisfiable Γ₁) : 
+unsatisfiable (mark_or φ Γ₁ Γ₂) :=
+begin apply unsat_subset, apply subset_mark_or_left, exact h end
+
+theorem unsat_mark_or_right {φ Γ₁ Γ₂} (h : unsatisfiable Γ₂) : 
+unsatisfiable (mark_or φ Γ₁ Γ₂) :=
+begin apply unsat_subset, apply subset_mark_or_right, exact h end
 
 def pmark_of_closed_and {Γ Δ} (i : and_instance Γ Δ) (m) (h : unsatisfiable Δ) (p : pmark Δ m) : {x // pmark Γ x} := 
 begin
@@ -240,16 +276,34 @@ begin
    apply erase_diff_erase_sublist_of_sublist hsub, exact hsat } } }
 end
 
-theorem modal_pmark {Γ} (h₁ : modal_applicable Γ) (i)
-(h₂ : i ∈ unmodal Γ ∧ unsatisfiable i): 
-pmark Γ (dia (list.head i) :: rebox (unbox Γ)) := 
+def unbox_sublist_of_unmodal (Γ : list nnf) : ∀ (i : list nnf),  i ∈ unmodal Γ → (∀ Δ, Δ <+ Γ → unbox Δ <+ i) := 
+list.mapp _ _ 
+begin 
+intros φ h Δ hΔ,  
+apply sublist_cons_of_sublist,
+apply unbox_sublist hΔ
+end
+
+theorem modal_pmark {Γ} (h₁ : modal_applicable Γ) (i m)
+(h₂ : i ∈ unmodal Γ ∧ unsatisfiable i) 
+(h₃ : pmark i m) : pmark Γ (mark_modal Γ i m) := 
 begin
   intro, intros hδ hsub, intro, intros, intro hsat,
-  have := unmodal_unsat_of_unsat Γ i h₂.1 h₂.2,
-  apply this st k s,
-  apply sat_subset _ _ _ _ _ hsat,
-  intros φ h, apply mem_diff_of_mem,
-  {cases h, rw h, exact unmodal_mem_head Γ i h₂.1,
-   apply rebox_unbox_of_mem, {simp [unbox_iff]}, {exact h}},
-  {intro, apply hδ, repeat {assumption} }
+  let B' := filter (≠ i.head) (unbox Δ),
+  have hsubB' : B' <+ i, 
+    {apply sublist.trans, swap 3, exact unbox Δ, apply filter_sublist, apply unbox_sublist_of_unmodal _ _ h₂.1 _ hsub},
+  have hB' : ∀ x, x ∈ B' → x ∉ m, 
+    {intros x hx hin, 
+     have hxi : x ∈ i, { exact subset_of_sublist hsubB' hx }, 
+     have := box_mem_of_mark_modal _ _ _ hin hxi, 
+     swap, {exact Γ},
+     cases this, 
+     {rw [mem_filter] at hx, have := hx.2, contradiction}, 
+     {apply hδ, swap, exact this, rw unbox_iff, rw [mem_filter] at hx, exact hx.1} },
+  have hunsat := h₃ B' hB' hsubB',
+  have hhead : dia i.head ∉ Δ, 
+    {intro hmem, apply hδ, exact hmem, simp},
+  have := unmodal_jump _ _ h₂.1 _ _ _ _ hsat hhead, 
+  rcases this with ⟨w, hw⟩,
+  apply hunsat, exact hw,
 end

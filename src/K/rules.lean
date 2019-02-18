@@ -78,12 +78,30 @@ end
 
 /-  This is essentially the modal rule. -/
 
+-- def tmap {p : list nnf → Prop} (f : Π Γ, p Γ → node Γ): Π Γ : list $ list nnf, (∀ i∈Γ, p i) → 
+-- psum ({i // i ∈ Γ ∧ unsatisfiable i}) {x : list model // batch_sat x Γ}
+-- | [] h := psum.inr ⟨[], bs_nil⟩
+-- | (hd :: tl) h := 
+-- match f hd (h hd (by simp)) with
+-- | (node.closed _ pr _) := psum.inl ⟨hd, by simp, pr⟩
+-- | (node.open_ w₁) := 
+--   match tmap tl (λ x hx, h x $ by simp [hx]) with
+--   | (psum.inl uw) := begin 
+--                        left, rcases uw with ⟨w, hin, h⟩, 
+--                        split, split, swap, exact h, simp [hin]
+--                      end
+--   | (psum.inr w₂) := psum.inr ⟨(w₁.1::w₂), bs_cons _ _ _ _ w₁.2 w₂.2⟩
+--   end
+-- end
+
 def tmap {p : list nnf → Prop} (f : Π Γ, p Γ → node Γ): Π Γ : list $ list nnf, (∀ i∈Γ, p i) → 
-psum ({i // i ∈ Γ ∧ unsatisfiable i}) {x : list model // batch_sat x Γ}
+psum 
+({ c : list nnf × list nnf // c.1 ∈ Γ ∧ unsatisfiable c.1 ∧ pmark c.1 c.2}) 
+{x : list model // batch_sat x Γ}
 | [] h := psum.inr ⟨[], bs_nil⟩
 | (hd :: tl) h := 
 match f hd (h hd (by simp)) with
-| (node.closed _ pr _) := psum.inl ⟨hd, by simp, pr⟩
+| (node.closed m pr pm) := psum.inl ⟨⟨hd,m⟩, by simp, pr, pm⟩
 | (node.open_ w₁) := 
   match tmap tl (λ x hx, h x $ by simp [hx]) with
   | (psum.inl uw) := begin 
