@@ -4,7 +4,7 @@ Released under MIT license as described in the file LICENSE.
 Author: Minchao Wu
 -/
 
-import defs
+import defs data.list.perm
 open nnf tactic
 
 meta def frame_restriction : tactic unit :=
@@ -48,91 +48,374 @@ begin
   apply inhabited_S4.1, exact 0 
 end
 
+
+structure psig : Type :=
+(d : nnf)
+(b : list nnf)
+
+def sig : Type := option psig
+
 inductive model
-| cons : list ℕ → list model → model
+| cons (h : list nnf) (a b : list psig) (s : sig): list model → model
 
-instance : decidable_eq model := by tactic.mk_dec_eq_instance
 
-open model
+open nnf
 
-@[simp] def mval : ℕ → model → bool
-| p (cons v r) := if p ∈ v then tt else ff
+@[simp] def sub_nnf : nnf → list nnf
+| (var n)    := [var n]
+| (neg n)    := [neg n]
+| (and φ ψ)  := and φ ψ :: (sub_nnf φ ++ sub_nnf ψ)
+| (or φ ψ)   := or φ ψ :: (sub_nnf φ ++ sub_nnf ψ)
+| (box φ)    := box φ :: sub_nnf φ
+| (dia φ)    := dia φ :: sub_nnf φ
 
-@[simp] def mtrans : model → model → bool
-| (cons v []) m := ff
-| (cons v (hd::tl)) m := if mtrans hd m then tt else mtrans (cons v tl) m
+theorem mem_sub_nnf_self : Π φ : nnf, φ ∈ sub_nnf φ :=
+begin intro φ, cases φ,  all_goals {simp} end 
 
-theorem trans_mtrans : Π s₁ s₂ s₃, mtrans s₁ s₂ → mtrans s₂ s₃ → mtrans s₁ s₃ 
-| (cons v []) s₂ s₃ h₁ h₂ := begin exfalso, simp at h₁, exact h₁ end
-| (cons v (hd::tl)) s₂ s₃ h₁ h₂ := 
+theorem mem_sub_nnf_and {φ ψ : nnf} : Π γ : nnf, and φ ψ ∈ sub_nnf γ → φ ∈ sub_nnf γ ∧ ψ ∈ sub_nnf γ
+| (var n) h   := begin simp at h, contradiction end
+| (neg n) h   := begin simp at h, contradiction end 
+| (and φ₁ ψ₁) h := 
+begin 
+simp only [sub_nnf] at h, 
+cases h, 
+{injection h with eq₁ eq₂, 
+ rw eq₁, rw eq₂, 
+ simp only [sub_nnf], 
+ split, 
+ {simp, right, left, apply mem_sub_nnf_self}, 
+ {simp, right, right, apply mem_sub_nnf_self}},
+{have := (@list.mem_append _ _ _ _).1 h,  
+ cases this,
+ {split,
+  {simp, right, left, apply (mem_sub_nnf_and _ _).1, exact this},
+  {simp, right, left, apply (mem_sub_nnf_and _ _).2, exact this}},
+ {split, 
+  {simp, right, right, apply (mem_sub_nnf_and _ _).1, exact this},
+  {simp, right, right, apply (mem_sub_nnf_and _ _).2, exact this}}}
+end
+| (or φ₁ ψ₁) h  := 
+begin 
+simp at h,
+cases h,
+ {split,
+  {simp, right, left, apply (mem_sub_nnf_and _ _).1, exact h},
+  {simp, right, left, apply (mem_sub_nnf_and _ _).2, exact h}},
+ {split, 
+  {simp, right, right, apply (mem_sub_nnf_and _ _).1, exact h},
+  {simp, right, right, apply (mem_sub_nnf_and _ _).2, exact h}}
+end
+| (box φ₁) h   := 
 begin
-  by_cases h : mtrans hd s₂ = tt,
-  { simp, apply if_pos, exact trans_mtrans _ _ _ h h₂ },
-  { have : mtrans (cons v (hd :: tl)) s₃ = tt, 
-    { simp, right, simp [h] at h₁, 
-      have : ite ↥(mtrans hd s₂) tt (mtrans (cons v tl) s₂) = mtrans (cons v tl) s₂,
-      { apply if_neg, exact h },
-      rw this at h₁, exact trans_mtrans _ _ _ h₁ h₂ },
-    exact this }
+simp at h,
+{split,
+ {simp, right, apply (mem_sub_nnf_and _ _).1, exact h},
+ {simp, right, apply (mem_sub_nnf_and _ _).2, exact h}}
+end
+| (dia φ₁) h   := 
+begin
+simp at h,
+{split,
+ {simp, right, apply (mem_sub_nnf_and _ _).1, exact h},
+ {simp, right, apply (mem_sub_nnf_and _ _).2, exact h}}
 end
 
-@[simp] def mrel : model → model → bool
-| m₁ m₂ := if m₁ = m₂ then tt else mtrans m₁ m₂
-
-theorem refl_mrel (s : model) : mrel s s := by cases s with v r; simp
-
-theorem mrel_nil (s v) (h : mrel (cons v []) s) : cons v [] = s :=
+theorem mem_sub_nnf_or {φ ψ : nnf} : Π γ : nnf, or φ ψ ∈ sub_nnf γ → φ ∈ sub_nnf γ ∧ ψ ∈ sub_nnf γ
+| (var n) h   := begin simp at h, contradiction end
+| (neg n) h   := begin simp at h, contradiction end 
+| (and φ₁ ψ₁) h := 
+begin 
+simp at h,
+cases h,
+ {split,
+  {simp, right, left, apply (mem_sub_nnf_or _ _).1, exact h},
+  {simp, right, left, apply (mem_sub_nnf_or _ _).2, exact h}},
+ {split, 
+  {simp, right, right, apply (mem_sub_nnf_or _ _).1, exact h},
+  {simp, right, right, apply (mem_sub_nnf_or _ _).2, exact h}}
+end
+| (or φ₁ ψ₁) h  := 
+begin 
+simp only [sub_nnf] at h, 
+cases h, 
+{injection h with eq₁ eq₂, 
+ rw eq₁, rw eq₂, 
+ simp only [sub_nnf], 
+ split, 
+ {simp, right, left, apply mem_sub_nnf_self}, 
+ {simp, right, right, apply mem_sub_nnf_self}},
+{have := (@list.mem_append _ _ _ _).1 h,  
+ cases this,
+ {split,
+  {simp, right, left, apply (mem_sub_nnf_or _ _).1, exact this},
+  {simp, right, left, apply (mem_sub_nnf_or _ _).2, exact this}},
+ {split, 
+  {simp, right, right, apply (mem_sub_nnf_or _ _).1, exact this},
+  {simp, right, right, apply (mem_sub_nnf_or _ _).2, exact this}}}
+end
+| (box φ₁) h   := 
 begin
-  by_cases hc : cons v [] = s,
-  {rw hc},
-  {have : mrel (cons v []) s = ff, {simp [hc]}, exfalso, 
-   rw this at h, contradiction}
+simp at h,
+{split,
+ {simp, right, apply (mem_sub_nnf_or _ _).1, exact h},
+ {simp, right, apply (mem_sub_nnf_or _ _).2, exact h}}
+end
+| (dia φ₁) h   := 
+begin
+simp at h,
+{split,
+ {simp, right, apply (mem_sub_nnf_or _ _).1, exact h},
+ {simp, right, apply (mem_sub_nnf_or _ _).2, exact h}}
 end
 
-theorem trans_mrel (s₁ s₂ s₃) (h₁ : mrel s₁ s₂) (h₂ : mrel s₂ s₃) : mrel s₁ s₃ :=
+theorem mem_sub_nnf_box {φ : nnf} : Π γ : nnf, box φ ∈ sub_nnf γ → φ ∈ sub_nnf γ
+| (var n) h   := begin simp at h, contradiction end
+| (neg n) h   := begin simp at h, contradiction end 
+| (and φ₁ ψ₁) h := 
+begin 
+simp at h, 
+cases h, 
+{simp, right, left, apply mem_sub_nnf_box, exact h},
+{simp, right, right, apply mem_sub_nnf_box, exact h}
+end
+| (or φ₁ ψ₁) h  := 
+begin 
+simp at h,
+cases h, 
+{simp, right, left, apply mem_sub_nnf_box, exact h},
+{simp, right, right, apply mem_sub_nnf_box, exact h}
+end
+| (box φ₁) h   := 
 begin
-  by_cases heq₁ : s₁ = s₂,
-  { rw ←heq₁ at h₂, exact h₂ },
-  { by_cases heq₂ : s₂ = s₃, 
-    { rw heq₂ at h₁, exact h₁ },
-    { by_cases heq₃ : s₁ = s₃,
-      { simp [heq₃] },
-      { simp [heq₃], simp [heq₁] at h₁, simp [heq₂] at h₂, exact trans_mtrans _ _ _ h₁ h₂ } } }
+simp at h,
+cases h, 
+{rw h, simp, right, apply mem_sub_nnf_self},
+{simp, right, apply mem_sub_nnf_box, exact h}
+end
+| (dia φ₁) h   := 
+begin
+simp at h,
+simp, right, apply mem_sub_nnf_box, exact h
 end
 
-theorem mrel_of_mtrans {s₁ s₂} (h : mtrans s₁ s₂) : mrel s₁ s₂ :=
-by by_cases heq : s₁ = s₂; {simp [heq, h]}
-
-theorem mem_of_mtrans_tt : Π {v r m}, mtrans (cons v r) m = tt → (∃ s ∈ r, mtrans s m)
-| v [] m h := by simp at h; contradiction
-| v (hd::tl) m h := 
+theorem mem_sub_nnf_dia {φ : nnf} : Π γ : nnf, dia φ ∈ sub_nnf γ → φ ∈ sub_nnf γ
+| (var n) h   := begin simp at h, contradiction end
+| (neg n) h   := begin simp at h, contradiction end 
+| (and φ₁ ψ₁) h := 
+begin 
+simp at h, 
+cases h, 
+{simp, right, left, apply mem_sub_nnf_dia, exact h},
+{simp, right, right, apply mem_sub_nnf_dia, exact h}
+end
+| (or φ₁ ψ₁) h  := 
+begin 
+simp at h,
+cases h, 
+{simp, right, left, apply mem_sub_nnf_dia, exact h},
+{simp, right, right, apply mem_sub_nnf_dia, exact h}
+end
+| (box φ₁) h   := 
 begin
-  simp at h,
-  cases h,
-  {split, swap, exact hd, split, simp, exact h},
-  {have := mem_of_mtrans_tt h, rcases this with ⟨w,hw,ht⟩, 
-   split, swap, exact w, split, simp [hw], exact ht}
+simp at h,
+simp, right, apply mem_sub_nnf_dia, exact h
+end
+| (dia φ₁) h   := 
+begin
+simp at h,
+cases h, 
+{rw h, simp, right, apply mem_sub_nnf_self},
+{simp, right, apply mem_sub_nnf_dia, exact h}
 end
 
-theorem mem_of_mrel_tt : Π {v r m}, mrel (cons v r) m = tt → (∃ s ∈ r, mrel s m) ∨ cons v r = m
-| v [] m h := begin right, apply mrel_nil, exact h end
-| v (hd::tl) m h := 
+@[simp] def closure : list nnf → list nnf
+| [] := []
+| (hd::tl) := sub_nnf hd ++ closure tl
+
+theorem mem_closure_and {φ ψ : nnf} : Π Γ : list nnf, and φ ψ ∈ closure Γ → φ ∈ closure Γ ∧ ψ ∈ closure Γ
+| [] h := absurd h $ list.not_mem_nil _
+| (hd::tl) h := 
 begin
-  simp at h,
-  rcases h with hl | hm | hr,
-  {right, exact hl},
-  {left, split, swap, exact hd, split, simp, apply mrel_of_mtrans hm},
-  {have := mem_of_mtrans_tt hr, rcases this with ⟨w,hw,ht⟩, 
-   left, split, swap, exact w, split, simp [hw], apply mrel_of_mtrans ht }
+simp at h,
+cases h,
+{split,
+ {simp, left, apply (mem_sub_nnf_and hd _).1, swap, exact h},
+ {simp, left, apply (mem_sub_nnf_and hd _).2, swap, exact h}},
+{split,
+ {simp, right, apply (mem_closure_and _ _).1, exact h},
+ {simp, right, apply (mem_closure_and _ _).2, exact h} }
 end
 
-@[simp] def builder : S4 model := 
-{val := λ n s, mval n s, rel := λ s₁ s₂, mrel s₁ s₂, refl := refl_mrel, trans := trans_mrel}
-
-theorem force_box_of_leaf {v φ} (h : force builder (cons v []) φ): 
-force builder (cons v []) (box φ) :=
+theorem mem_closure_box {φ : nnf} : Π Γ : list nnf, box φ ∈ closure Γ → φ ∈ closure Γ
+| [] h := absurd h $ list.not_mem_nil _
+| (hd::tl) h := 
 begin
-  dsimp, intros s' hs',
-  have : cons v [] = s', {apply mrel_nil, exact hs'},
-  rw ←this, assumption
+simp at h,
+cases h,
+{simp, left, apply mem_sub_nnf_box _ h},
+{simp, right, apply mem_closure_box _ h}
+end
+
+theorem mem_closure_dia {φ : nnf} : Π Γ : list nnf, dia φ ∈ closure Γ → φ ∈ closure Γ
+| [] h := absurd h $ list.not_mem_nil _
+| (hd::tl) h := 
+begin
+simp at h,
+cases h,
+{simp, left, apply mem_sub_nnf_dia _ h},
+{simp, right, apply mem_closure_dia _ h}
+end
+
+
+namespace list
+universes u v w
+variables {α : Type u}
+
+theorem length_sub_lt_of_nodup_subperm [decidable_eq α] {l₁ l₂ : list α} {a : α} 
+(h₁ : l₁ <+~ l₂) (h₂ : a ∈ l₂) (h₃ : a ∉ l₁) (h₄ : nodup l₁):
+length l₂ - length (a :: l₁) < length l₂ - length l₁
+:=
+begin
+rw nat.sub_lt_sub_left_iff,
+{simp, apply zero_lt_one}, 
+{apply length_le_of_subperm, apply cons_subperm_of_mem, repeat {assumption}}
+end
+
+theorem nil_subperm {l : list α} : [] <+~ l := 
+⟨[], perm.nil, by simp⟩ 
+
+end list
+
+structure sseqt : Type :=
+(goal : list nnf)
+(s : sig)
+(a : list psig)
+(h b m: list nnf)
+(ndh : list.nodup h)
+(ndb : list.nodup b)
+(sph : h <+~ closure goal)
+(spb : b <+~ closure goal)
+(sbm : m ⊆ closure goal)
+
+def sseqt_size (s : sseqt) : ℕ × ℕ × ℕ := 
+((closure s.goal).length - s.b.length, 
+ (closure s.goal).length - s.h.length, 
+ node_size s.m)
+
+def and_child {φ ψ} (Γ : sseqt) (h : nnf.and φ ψ ∈ Γ.m) : sseqt :=
+{ goal := Γ.goal, 
+  s := none,
+  a := Γ.a, 
+  h := Γ.h, 
+  b := Γ.b, 
+  m := φ :: ψ :: Γ.m.erase (and φ ψ),
+  ndh := Γ.ndh,
+  ndb := Γ.ndb,
+  sph := Γ.sph,
+  spb := Γ.spb,
+  sbm := begin 
+          intros x hx, cases hx, 
+          {rw hx, apply (mem_closure_and _ (Γ.sbm h)).1}, 
+          {cases hx, 
+           {rw hx, apply (mem_closure_and _ (Γ.sbm h)).2},
+           {apply Γ.sbm, apply list.erase_subset, exact hx}}
+         end }
+
+inductive and_instance_seqt (Γ : sseqt) : sseqt → Type
+| cons : Π {φ ψ} (h : nnf.and φ ψ ∈ Γ.m), 
+         and_instance_seqt $ and_child Γ h
+
+def box_child_new {φ} (Γ : sseqt) (h₁ : nnf.box φ ∈ Γ.m) (h₂ : nnf.box φ ∉ Γ.b) : sseqt :=
+{ goal := Γ.goal, 
+  s := none,
+  a := Γ.a, 
+  h := [], 
+  b := box φ :: Γ.b, 
+  m := φ :: Γ.m.erase (box φ),
+  ndh := by simp,
+  ndb := begin rw list.nodup_cons, split, exact h₂, exact Γ.ndb end,
+  sph := begin apply list.nil_subperm end,
+  spb := begin 
+           apply list.cons_subperm_of_mem Γ.ndb h₂, 
+           apply Γ.sbm h₁, apply Γ.spb
+         end,
+  sbm := begin 
+           intros x hx, cases hx, 
+           {rw hx, apply mem_closure_box _ (Γ.sbm h₁)}, 
+           {apply Γ.sbm, apply list.erase_subset, exact hx}
+         end }
+
+def box_child {φ} (Γ : sseqt) (h₁ : nnf.box φ ∈ Γ.m) : sseqt :=
+{ goal := Γ.goal, 
+  s := none,
+  a := Γ.a, 
+  h := Γ.h, 
+  b := Γ.b, 
+  m := φ :: Γ.m.erase (box φ),
+  ndh := Γ.ndh,
+  ndb := Γ.ndb,
+  sph := Γ.sph,
+  spb := Γ.spb,
+  sbm := begin 
+           intros x hx, cases hx, 
+           {rw hx, apply mem_closure_box _ (Γ.sbm h₁)}, 
+           {apply Γ.sbm, apply list.erase_subset, exact hx}
+         end }
+
+
+@[simp] def filter_dia (l : list nnf) : list nnf → list nnf
+| [] := []
+| (var n::tl) := var n :: filter_dia tl
+| (neg n::tl) := neg n :: filter_dia tl
+| (and φ ψ::tl) := and φ ψ :: filter_dia tl
+| (or φ ψ::tl) := or φ ψ :: filter_dia tl
+| (box φ::tl) := box φ :: filter_dia tl
+| (dia φ::tl) := if φ ∈ l then filter_dia tl else φ :: filter_dia tl
+
+@[simp] def filter_undia (l : list nnf) : list nnf → list nnf
+| [] := []
+| (dia φ::tl) := if φ ∈ l then filter_undia tl else φ :: filter_undia tl
+| (e::tl) := filter_undia tl
+
+theorem mem_filter_undia_left : Π l Γ φ (h₁ : dia φ ∈ Γ) (h₂ : φ ∉ l),
+φ ∈ filter_undia l Γ
+| l [] φ h₁ h₂ := absurd h₁ $ list.not_mem_nil _
+| l (hd :: tl) φ h₁ h₂ := 
+begin
+cases h : hd,
+case nnf.dia : ψ 
+{rw h at h₁, simp, 
+ by_cases hc : ψ ∈ l,
+ {rw if_pos, apply mem_filter_undia_left, cases h₁, {injection h₁ with h₁', rw ←h₁' at hc, contradiction}, {exact h₁}, repeat {assumption}},
+ {rw if_neg, cases h₁, {injection h₁ with h₁', rw h₁', simp}, {right, apply mem_filter_undia_left, exact h₁, exact h₂}, exact hc}},
+all_goals 
+{simp, rw h at h₁, cases h₁, contradiction, apply mem_filter_undia_left, repeat {assumption}}
+end
+
+theorem mem_filter_dia_right_aux : Π l Γ φ, φ ∈ filter_undia l Γ → dia φ ∈ Γ 
+| l [] φ h := absurd h $ list.not_mem_nil _
+| l (hd :: tl) φ h := 
+begin
+cases h₁ : hd,
+case nnf.dia : ψ 
+{rw h₁ at h, dsimp at h, 
+ by_cases hc : ψ ∈ l, 
+ {rw if_pos at h, have := mem_filter_dia_right_aux l tl φ h, right, exact this, exact hc},
+ {rw if_neg at h, cases h, {rw h, simp}, {have := mem_filter_dia_right_aux l tl φ h, right, exact this}, exact hc}},
+all_goals 
+{rw h₁ at h, simp at h, right, apply mem_filter_dia_right_aux, exact h}
+end
+
+theorem mem_filter_dia_right : Π l Γ φ (h₂ : φ ∈ filter_undia l Γ), φ ∉ l
+| l [] φ h := absurd h $ list.not_mem_nil _
+| l (hd :: tl) φ h := 
+begin 
+cases h₁ : hd,
+case nnf.dia : ψ 
+{rw h₁ at h, dsimp at h, 
+ by_cases hc : ψ ∈ l, 
+ {rw if_pos at h, have := mem_filter_dia_right l tl φ h, exact this, exact hc},
+ {rw if_neg at h, cases h, {rw h, exact hc}, {have := mem_filter_dia_right l tl φ h, exact this}, exact hc}},
+all_goals 
+{rw h₁ at h, simp at h, apply mem_filter_dia_right, exact h}
 end
