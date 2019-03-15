@@ -53,11 +53,11 @@ structure psig : Type :=
 (d : nnf)
 (b : list nnf)
 
+instance : decidable_eq psig := by tactic.mk_dec_eq_instance
+
 def sig : Type := option psig
 
-inductive model
-| cons (h : list nnf) (a b : list psig) (s : sig): list model → model
-
+instance : decidable_eq sig := by tactic.mk_dec_eq_instance
 
 open nnf
 
@@ -297,6 +297,8 @@ structure sseqt : Type :=
 (spb : b <+~ closure goal)
 (sbm : m ⊆ closure goal)
 
+instance : decidable_eq sseqt := by tactic.mk_dec_eq_instance
+
 def sseqt_size (s : sseqt) : ℕ × ℕ × ℕ := 
 ((closure s.goal).length - s.b.length, 
  (closure s.goal).length - s.h.length, 
@@ -419,3 +421,120 @@ case nnf.dia : ψ
 all_goals 
 {rw h₁ at h, simp at h, apply mem_filter_dia_right, exact h}
 end
+
+structure hintikka (Γ : list nnf) : Prop :=
+(hno_contra : ∀ {n}, var n ∈ Γ → neg n ∉ Γ)
+(hand_left : ∀ {φ ψ}, nnf.and φ ψ ∈ Γ → φ ∈ Γ)
+(hand_right : ∀ {φ ψ}, nnf.and φ ψ ∈ Γ → ψ ∈ Γ)
+(hor : ∀ {φ ψ}, nnf.or φ ψ ∈ Γ → φ ∈ Γ ∨ ψ ∈ Γ)
+
+structure info : Type :=
+(Γ : sseqt)
+(htk : list nnf)
+(hhtk : hintikka htk)
+(mhtk : Γ.m ⊆ htk)
+
+instance : decidable_eq info := by tactic.mk_dec_eq_instance
+
+inductive model
+| cons : info → list model → model
+
+instance : decidable_eq model := by tactic.mk_dec_eq_instance
+
+open model
+
+def htk : Π m : model, list nnf
+| (cons i l) := i.htk
+
+def hist : Π m : model, list nnf
+| (cons i l) := i.Γ.h
+
+def msig : Π m : model, sig
+| (cons i l) := i.Γ.s
+
+def manc : Π m : model, list psig
+| (cons i l) := i.Γ.a
+
+def bhist : Π m : model, list nnf
+| (cons i l) := i.Γ.b
+
+def model_step_box : Π m : model, Prop 
+| m@(cons i l) := ∀ s ∈ l, ∀ φ, box φ ∈ i.htk → box φ ∈ htk s
+
+def model_step_dia_fwd : Π m : model, Prop 
+| m@(cons i l) := ∀ s ∈ l, ∀ φ, dia φ ∈ i.htk → φ ∉ hist s→ φ ∈ htk s
+
+@[simp] mutual def desc, comp_desc
+with desc : model → model → bool
+| c m@(cons _ []) := ff
+| c m@(cons i l) := comp_desc c l
+with comp_desc : model → list model → bool
+| c [] := ff
+| c (hd::tl) := 
+have h : 2 < 1 + (1 + (1 + list.sizeof tl)), 
+begin 
+  rw ←add_assoc, 
+  rw one_add_one_eq_two, 
+  apply nat.lt_add_of_zero_lt_left, 
+  rw add_comm, 
+  apply nat.succ_pos 
+end,
+if c = hd ∨ desc c hd then tt else comp_desc c tl
+
+theorem desc_step : Π c i l, c ∈ l → desc c (cons i l)
+| c i [] h := absurd h $ list.not_mem_nil _
+| c i (hd::tl) h := 
+begin
+cases h, 
+{simp, rw if_pos, simp, left, exact h},
+{simp, by_cases heq : c = hd ∨ desc c hd = tt, 
+ {rw if_pos, simp, exact heq},
+ {rw if_neg, have := desc_step _ i _ h, 
+  cases tl,
+  {exact absurd h (list.not_mem_nil hd)},
+  {simp at this, simp, exact this}, exact heq}}
+end
+
+theorem desc_ex : Π c i l, (∃ m ∈ l, desc c m) → desc c (cons i l)
+| c i [] h := begin rcases h with ⟨w, hmem, hw⟩, exact (absurd hmem $ list.not_mem_nil _) end
+| c i (hd::tl) h := 
+begin
+rcases h with ⟨w, hmem, hw⟩,
+cases hmem,
+{simp, rw if_pos, simp, rw ←hmem, right, exact hw},
+{simp, by_cases heq : c = hd ∨ desc c hd = tt, 
+ {rw if_pos, simp, exact heq},
+ {rw if_neg, have := desc_ex _ i _ ⟨w, hmem, hw⟩, 
+  cases tl,
+  {exact absurd hmem (list.not_mem_nil w)},
+  {simp at this, simp, exact this}, exact heq}}
+end
+
+theorem ex_desc : Π c i l, desc c (cons i l) → (c ∈ l ∨ ∃ m ∈ l, desc c m)
+| c i [] h := begin simp at h, contradiction end
+| c i (hd::tl) h := 
+begin
+simp at h,
+by_cases hc : c = hd ∨ desc c hd = tt, 
+{cases hc, 
+ {left, left, exact hc},
+ {right, split, split, apply list.mem_cons_self, exact hc}},
+{rw if_neg at h, 
+ have hex := ex_desc c i tl,
+ cases tl, 
+ {contradiction},
+ {have : desc c (cons i (tl_hd :: tl_tl)) = tt,
+    {simp only [desc], exact h},
+  rcases hex this with hl | ⟨w, hmem, hw⟩,   
+  {left, simp [hl]},
+  {right, split, split, swap, exact hw, simp [hmem]}},
+ exact hc}
+end
+
+def model_anc : Π m : model, Prop 
+| m@(cons i l) := ∀ s φ, desc s m → 
+                          dia φ ∈ i.htk → 
+                          φ ∈ hist s → 
+                          ((⟨φ, bhist s⟩ : psig) ∈ manc m) ∨
+                          (∃ d, desc d m ∧ 
+                          some (⟨φ, bhist s⟩ : psig) = msig d)
