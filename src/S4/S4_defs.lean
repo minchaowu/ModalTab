@@ -472,7 +472,7 @@ def bhist : Π m : tmodel, list nnf
 def request : Π m : tmodel, list psig
 | (cons i l ba) := ba
 
-def proper_request_box : Π m : tmodel, Prop
+@[simp] def proper_request_box : Π m : tmodel, Prop
 | (cons i l ba) := ∀ rq : psig, rq ∈ ba → ∀ φ, (box φ ∈ i.htk ∨ box φ ∈ i.Γ.b) → box φ ∈ rq.b
 
 def proper_request_dia : Π m : tmodel, Prop
@@ -482,7 +482,7 @@ def tmodel_step_bhist : Π m : tmodel, Prop
 | m@(cons i l ba) := ∀ s ∈ l, ∀ φ, box φ ∈ i.Γ.b → φ ∈ htk s
 
 @[simp] def tmodel_step_box : Π m : tmodel, Prop 
-| m@(cons i l ba) := ∀ s ∈ l, ∀ φ, box φ ∈ i.htk → φ ∈ htk s
+| m@(cons i l ba) := ∀ s ∈ l, ∀ φ, box φ ∈ i.htk → box φ ∈ htk s
 
 def tmodel_step_dia_fwd : Π m : tmodel, Prop 
 | m@(cons i l ba) := ∀ s ∈ l, ∀ φ, dia φ ∈ i.htk → φ ∉ i.Γ.h → φ ∈ htk s
@@ -563,6 +563,7 @@ end
 def tmodel_anc : Π m : tmodel, Prop 
 | m@(cons i l ba) := ∀ s rq, desc s m → rq ∈ request s →  
                      (rq ∈ manc m) ∨
+                     (some rq = msig m) ∨
                      (∃ d, desc d m ∧ some rq = msig d)
 
 structure ptmodel (m : tmodel) : Prop :=
@@ -572,6 +573,8 @@ structure ptmodel (m : tmodel) : Prop :=
 (bdia : tmodel_anc m)
 (psig₁ : pmsig_dia m)
 (psig₂ : pmsig_box m)
+(reqb : proper_request_box m)
+(reqd : proper_request_dia m)
 
 open subtype
 
@@ -594,23 +597,54 @@ cases h₁,
  have := h₁_h.sbox,
  simp at this, simp at h₂,
  have hmem := this _ h₁_a _ h₂,
- simp at hmem, exact hmem 
-},
+ simp at hmem, apply i₂.hhtk.hbox, exact hmem },
 {cases s₂ with s₂ ps₂,
  cases s₂ with i₂ l₂ sg₂,
+ simp, apply i₂.hhtk.hbox,
  rcases h₁_a with ⟨w,hmem,hw⟩,
- simp,
+ simp at hw,
  apply i₂.mhtk,
  have := ps₂.psig₂,
- simp at this,
- have hneq : i₂.Γ.s ≠ none, 
-   {intro heq, simp at hw, rw heq at hw, contradiction},
+ simp at this, rw ←hw at this,
+ have hneq : some w ≠ none, 
+   {intro heq, contradiction},
  have hsub := this hneq,
  apply hsub,
-
-}
+ have := h₁_h.reqb,
+ simp at this, simp at h₂,
+ have hc := this w hmem φ (or.inl h₂),
+ cases w, 
+ dsimp [bsig], exact hc}
 end
 
+theorem reach_step_box' (s₁ s₂ φ) (h₁ : reach_step s₁ s₂) (h₂ : box φ ∈ htk s₁.1) : box φ ∈ htk s₂.1 :=
+begin
+cases h₁,
+{cases s₂ with s₂ ps₂,
+ cases s₂ with i₂ l₂ sg₂,
+ simp,
+ have := h₁_h.sbox,
+ simp at this, simp at h₂,
+ have hmem := this _ h₁_a _ h₂,
+ simp at hmem, exact hmem },
+{cases s₂ with s₂ ps₂,
+ cases s₂ with i₂ l₂ sg₂,
+ simp,
+ rcases h₁_a with ⟨w,hmem,hw⟩,
+ simp at hw,
+ apply i₂.mhtk,
+ have := ps₂.psig₂,
+ simp at this, rw ←hw at this,
+ have hneq : some w ≠ none, 
+   {intro heq, contradiction},
+ have hsub := this hneq,
+ apply hsub,
+ have := h₁_h.reqb,
+ simp at this, simp at h₂,
+ have hc := this w hmem φ (or.inl h₂),
+ cases w, 
+ dsimp [bsig], exact hc}
+end
 
 inductive rtc {α : Type} (r : α → α → Prop) : α → α → Prop
 | refl   : Π a, rtc a a
@@ -624,8 +658,6 @@ induction h₁,
 exact h₂,
 apply rtc.step, exact h₁_a_1, apply h₁_ih, exact h₂
 end
-
--- def reach (s₁ s₂ : model) := rtc reach_step s₁.1 s₂.1
 
 def reach (s₁ s₂ : model) := rtc reach_step s₁ s₂
 
@@ -641,15 +673,14 @@ def frame : Π m : model, S4 {x : model // x = m ∨ desc x.1 m.1}
 
 open rtc
 
--- theorem reach_box (s₁ s₂ φ) (h₁ : reach s₁ s₂) (h₂ : box φ ∈ htk s₁.1) : φ ∈ htk s₂.1 :=
--- begin
--- induction h₁ with m m₁ m₂ m₃ h₁₂ h₂₃ ih, 
--- {cases m with tm hm, cases tm with i l sg,
--- simp,
--- apply i.hhtk.hbox,
--- simp at h₂, exact h₂},
--- {apply ih, 
---  -- cases h₁₂,
-
--- }
--- end
+theorem reach_box (s₁ s₂ φ) (h₁ : reach s₁ s₂) (h₂ : box φ ∈ htk s₁.1) : φ ∈ htk s₂.1 :=
+begin
+induction h₁ with m m₁ m₂ m₃ h₁₂ h₂₃ ih, 
+{cases m with tm hm, cases tm with i l sg,
+simp,
+apply i.hhtk.hbox,
+simp at h₂, exact h₂},
+{apply ih, 
+ apply reach_step_box',
+ exact h₁₂, exact h₂}
+end
