@@ -479,7 +479,7 @@ def proper_request_dia : Π m : tmodel, Prop
 | m@(cons i l ba) := ∀ φ, dia φ ∈ i.htk → φ ∈ i.Γ.h → ∃ rq : psig, rq ∈ ba ∧ rq.d = φ
 
 def tmodel_step_bhist : Π m : tmodel, Prop 
-| m@(cons i l ba) := ∀ s ∈ l, ∀ φ, box φ ∈ i.Γ.b → φ ∈ htk s
+| m@(cons i l ba) := ∀ s ∈ l, ∀ φ, box φ ∈ i.Γ.b → box φ ∈ htk s
 
 @[simp] def tmodel_step_box : Π m : tmodel, Prop 
 | m@(cons i l ba) := ∀ s ∈ l, ∀ φ, box φ ∈ i.htk → box φ ∈ htk s
@@ -579,10 +579,6 @@ structure ptmodel (m : tmodel) : Prop :=
 open subtype
 
 def model : Type := {m : tmodel // ptmodel m}
-
--- inductive reach_step : tmodel → tmodel → Prop
--- | fwd_base (s i l ba) : s ∈ l → reach_step (cons i l ba) s
--- | bwd_base (s i l ba) : (∃ rq ∈ ba, some rq = msig s) → reach_step (cons i l ba) s
 
 inductive reach_step : model → model → Prop
 | fwd_base (s : model) (i l ba h) : s.1 ∈ l → reach_step ⟨(cons i l ba), h⟩  s
@@ -684,3 +680,6 @@ simp at h₂, exact h₂},
  apply reach_step_box',
  exact h₁₂, exact h₂}
 end
+
+theorem reach_dia (s : model) (φ) (h₂ : dia φ ∈ htk s.1) : ∃ s', reach s s' ∧ φ ∈ htk s'.1 :=
+sorry
