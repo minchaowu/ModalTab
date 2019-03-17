@@ -371,16 +371,6 @@ def box_child {φ} (Γ : sseqt) (h₁ : nnf.box φ ∈ Γ.m) : sseqt :=
            {apply Γ.sbm, apply list.erase_subset, exact hx}
          end }
 
-
-@[simp] def filter_dia (l : list nnf) : list nnf → list nnf
-| [] := []
-| (var n::tl) := var n :: filter_dia tl
-| (neg n::tl) := neg n :: filter_dia tl
-| (and φ ψ::tl) := and φ ψ :: filter_dia tl
-| (or φ ψ::tl) := or φ ψ :: filter_dia tl
-| (box φ::tl) := box φ :: filter_dia tl
-| (dia φ::tl) := if φ ∈ l then filter_dia tl else φ :: filter_dia tl
-
 @[simp] def filter_undia (l : list nnf) : list nnf → list nnf
 | [] := []
 | (dia φ::tl) := if φ ∈ l then filter_undia tl else φ :: filter_undia tl
@@ -463,20 +453,20 @@ def hist : Π m : tmodel, list nnf
 @[simp] def msig : Π m : tmodel, sig
 | (cons i l ba) := i.Γ.s
 
-def manc : Π m : tmodel, list psig
+@[simp] def manc : Π m : tmodel, list psig
 | (cons i l ba) := i.Γ.a
 
 def bhist : Π m : tmodel, list nnf
 | (cons i l ba) := i.Γ.b
 
-def request : Π m : tmodel, list psig
+@[simp] def request : Π m : tmodel, list psig
 | (cons i l ba) := ba
 
 @[simp] def proper_request_box : Π m : tmodel, Prop
 | (cons i l ba) := ∀ rq : psig, rq ∈ ba → ∀ φ, (box φ ∈ i.htk ∨ box φ ∈ i.Γ.b) → box φ ∈ rq.b
 
-def proper_request_dia : Π m : tmodel, Prop
-| m@(cons i l ba) := ∀ φ, dia φ ∈ i.htk → φ ∈ i.Γ.h → ∃ rq : psig, rq ∈ ba ∧ rq.d = φ
+@[simp] def subset_request : Π m : tmodel, Prop
+| (cons i l ba) := ba ⊆ i.Γ.a
 
 def tmodel_step_bhist : Π m : tmodel, Prop 
 | m@(cons i l ba) := ∀ s ∈ l, ∀ φ, box φ ∈ i.Γ.b → box φ ∈ htk s
@@ -484,44 +474,48 @@ def tmodel_step_bhist : Π m : tmodel, Prop
 @[simp] def tmodel_step_box : Π m : tmodel, Prop 
 | m@(cons i l ba) := ∀ s ∈ l, ∀ φ, box φ ∈ i.htk → box φ ∈ htk s
 
-def tmodel_step_dia_fwd : Π m : tmodel, Prop 
-| m@(cons i l ba) := ∀ s ∈ l, ∀ φ, dia φ ∈ i.htk → φ ∉ i.Γ.h → φ ∈ htk s
+@[simp] def tmodel_dia : Π m : tmodel, Prop 
+| m@(cons i l ba) := ∀ φ, dia φ ∈ i.htk → (∃ rq : psig, rq ∈ ba ∧ rq.d = φ) ∨ ∃ s ∈ l, φ ∈ htk s
 
-def pmsig_dia : Π m : tmodel, Prop
+@[simp] def pmsig_dia : Π m : tmodel, Prop
 | m@(cons i l ba) := Π (h : i.Γ.s ≠ none), dsig i.Γ.s h ∈ i.Γ.m
 
 @[simp] def pmsig_box : Π m : tmodel, Prop
 | m@(cons i l ba) := Π (h : i.Γ.s ≠ none), bsig i.Γ.s h ⊆ i.Γ.m
 
-@[simp] mutual def desc, comp_desc
-with desc : tmodel → tmodel → bool
-| c m@(cons _ [] ba) := ff
-| c m@(cons i l ba) := comp_desc c l
-with comp_desc : tmodel → list tmodel → bool
-| c [] := ff
-| c (hd::tl) := 
-have h : 2 < 1 + (1 + (1 + list.sizeof tl)), 
-begin 
-  rw ←add_assoc, 
-  rw one_add_one_eq_two, 
-  apply nat.lt_add_of_zero_lt_left, 
-  rw add_comm, 
-  apply nat.succ_pos 
-end,
-if c = hd ∨ desc c hd then tt else comp_desc c tl
+@[simp] def child : tmodel → tmodel → bool
+| s (cons i l ba) := s ∈ l
+
+inductive tc' {α : Type} (r : α → α → Prop) : α → α → Prop
+| base  : ∀ a b, r a b → tc' a b
+| step : ∀ a b c, r a b → tc' b c → tc' a c
+
+theorem tc'.trans {α : Type} {r : α → α → Prop} {a b c : α} : 
+tc' r a b → tc' r b c → tc' r a c :=
+begin
+intros h₁ h₂,
+induction h₁,
+apply tc'.step, exact h₁_a_1, exact h₂,
+apply tc'.step, exact h₁_a_1, apply h₁_ih, exact h₂
+end
+
+def desc : tmodel → tmodel → Prop := tc' (λ s m, child s m)
+
+theorem desc_not_nil : Π c i ba m, m = cons i [] ba → desc c m → false :=
+begin
+intros c i ba m heq h,
+induction h,
+{rw heq at h_a_1, simp at h_a_1, exact h_a_1},
+{apply h_ih, exact heq}
+end
 
 theorem desc_step : Π c i l ba, c ∈ l → desc c (cons i l ba)
 | c i [] ba h := absurd h $ list.not_mem_nil _
 | c i (hd::tl) ba h := 
 begin
-cases h, 
-{simp, rw if_pos, simp, left, exact h},
-{simp, by_cases heq : c = hd ∨ desc c hd = tt, 
- {rw if_pos, simp, exact heq},
- {rw if_neg, have := desc_step _ i _ _ h, 
-  cases tl,
-  {exact absurd h (list.not_mem_nil hd)},
-  {simp at this, simp, exact this}, exact ba, exact heq}}
+constructor,
+simp, cases h,
+left, exact h, right, exact h
 end
 
 theorem desc_ex : Π c i l ba, (∃ m ∈ l, desc c m) → desc c (cons i l ba)
@@ -529,60 +523,53 @@ theorem desc_ex : Π c i l ba, (∃ m ∈ l, desc c m) → desc c (cons i l ba)
 | c i (hd::tl) ba h := 
 begin
 rcases h with ⟨w, hmem, hw⟩,
-cases hmem,
-{simp, rw if_pos, simp, rw ←hmem, right, exact hw},
-{simp, by_cases heq : c = hd ∨ desc c hd = tt, 
- {rw if_pos, simp, exact heq},
- {rw if_neg, have := desc_ex _ i _ ba ⟨w, hmem, hw⟩, 
-  cases tl,
-  {exact absurd hmem (list.not_mem_nil w)},
-  {simp at this, simp, exact this}, exact heq}}
+cases hw,
+{apply tc'.step,
+swap 3, {exact w},
+{exact hw_a_1},
+{apply tc'.base, simp, cases hmem, left, exact hmem, right, exact hmem}},
+{apply tc'.step, exact hw_a_1, apply tc'.trans, exact hw_a_2, apply tc'.base, simp, exact hmem}
 end
 
-theorem ex_desc : Π c i l ba, desc c (cons i l ba) → (c ∈ l ∨ ∃ m ∈ l, desc c m)
-| c i [] ba h := begin simp at h, contradiction end
-| c i (hd::tl) ba h := 
+theorem ex_desc : Π c i l ba m, m = (cons i l ba) → desc c m → (c ∈ l ∨ ∃ m ∈ l, desc c m) := 
 begin
-simp at h,
-by_cases hc : c = hd ∨ desc c hd = tt, 
-{cases hc, 
- {left, left, exact hc},
- {right, split, split, apply list.mem_cons_self, exact hc}},
-{rw if_neg at h, 
- have hex := ex_desc c i tl ba,
- cases tl, 
- {contradiction},
- {have : desc c (cons i (tl_hd :: tl_tl) ba) = tt,
-    {simp only [desc], exact h},
-  rcases hex this with hl | ⟨w, hmem, hw⟩,   
-  {left, simp [hl]},
-  {right, split, split, swap, exact hw, simp [hmem]}},
- exact hc}
+intros c i l ba m heq h,
+induction h,
+{left, rw heq at h_a_1, simp at h_a_1, exact h_a_1},
+{cases h_ih heq,
+ {right, split, split, exact h, apply tc'.base, exact h_a_1},
+ {rcases h with ⟨w, hmem, hw⟩, right, split, split, exact hmem, apply tc'.step, exact h_a_1, exact hw}}
 end
 
-def tmodel_anc : Π m : tmodel, Prop 
+@[simp] def tmodel_anc : Π m : tmodel, Prop 
 | m@(cons i l ba) := ∀ s rq, desc s m → rq ∈ request s →  
                      (rq ∈ manc m) ∨
-                     (some rq = msig m) ∨
+                     -- (some rq = msig m) ∨
                      (∃ d, desc d m ∧ some rq = msig d)
 
 structure ptmodel (m : tmodel) : Prop :=
 (bhist : tmodel_step_bhist m)
 (sbox : tmodel_step_box m)
-(fdia : tmodel_step_dia_fwd m)
+(pdia : tmodel_dia m)
 (bdia : tmodel_anc m)
 (psig₁ : pmsig_dia m)
 (psig₂ : pmsig_box m)
 (reqb : proper_request_box m)
-(reqd : proper_request_dia m)
+(sreq : subset_request m)
+
+def global_pt (m : tmodel) := ∀ s, desc s m → ptmodel s
 
 open subtype
 
-def model : Type := {m : tmodel // ptmodel m}
+def model : Type := {m : tmodel // ptmodel m ∧ global_pt m}
 
-inductive reach_step : model → model → Prop
-| fwd_base (s : model) (i l ba h) : s.1 ∈ l → reach_step ⟨(cons i l ba), h⟩  s
-| bwd_base (s : model) (i l ba h) : (∃ rq ∈ ba, some rq = msig s.1) → reach_step ⟨(cons i l ba), h⟩ s
+def rmodel : Type := {m : tmodel // ptmodel m}
+
+theorem global_property {m : model} {s : tmodel} (h : desc s m.1) : ptmodel s := m.2.2 s h
+
+inductive reach_step : rmodel → rmodel → Prop
+| fwd_base (s : rmodel) (i l ba h) : s.1 ∈ l → reach_step ⟨(cons i l ba), h⟩  s
+| bwd_base (s : rmodel) (i l ba h) : (∃ rq ∈ ba, some rq = msig s.1) → reach_step ⟨(cons i l ba), h⟩ s
 
 theorem reach_step_box (s₁ s₂ φ) (h₁ : reach_step s₁ s₂) (h₂ : box φ ∈ htk s₁.1) : φ ∈ htk s₂.1 :=
 begin
@@ -655,13 +642,13 @@ exact h₂,
 apply rtc.step, exact h₁_a_1, apply h₁_ih, exact h₂
 end
 
-def reach (s₁ s₂ : model) := rtc reach_step s₁ s₂
+def reach (s₁ s₂ : rmodel) := rtc reach_step s₁ s₂
 
 theorem refl_reach : Π s, reach s s := λ s, rtc.refl _ _
 
 theorem trans_reach : Π s₁ s₂ s₃, reach s₁ s₂ → reach s₂ s₃ → reach s₁ s₃ := λ s₁ s₂ s₃ h₁ h₂, rtc.trans h₁ h₂
 
-def frame : Π m : model, S4 {x : model // x = m ∨ desc x.1 m.1} 
+def frame : Π m : model, S4 {x : rmodel // x.1 = m.1 ∨ desc x.1 m.1} 
 | m@⟨(cons i l ba), p⟩ := {val := λ v s, var v ∈ htk s.1.1, 
                           rel := λ s₁ s₂, reach s₁ s₂, 
                           refl := λ s, refl_reach s, 
@@ -681,5 +668,53 @@ simp at h₂, exact h₂},
  exact h₁₂, exact h₂}
 end
 
-theorem reach_dia (s : model) (φ) (h₂ : dia φ ∈ htk s.1) : ∃ s', reach s s' ∧ φ ∈ htk s'.1 :=
-sorry
+theorem reach_dia (s : rmodel) (rt : model) (φ) 
+(h₁ : desc s.1 rt.1) 
+(h₂ : manc rt.1 = []) (h₃ : dia φ ∈ htk s.1) : 
+∃ s', reach_step s s' ∧ φ ∈ htk s'.1 :=
+begin
+cases s with s ps,
+cases s with i l sg,
+have := ps.pdia,
+simp at this, simp at h₃,
+have hc := this _ h₃,
+cases hc,
+{cases rt with rt prt,
+ cases rt with irt lrt sgrt,
+ rcases hc with ⟨w, hmem, hw⟩,
+ have := prt.1.bdia,
+ simp at this, simp at h₁,
+ have hcaux := this _ w h₁,
+ simp at hcaux,
+ have hcc := hcaux hmem,
+ simp at h₂,
+ cases hcc,
+ {rw h₂ at hcc, exfalso, apply list.not_mem_nil, exact hcc},
+ {rcases hcc with ⟨m, hml, hmr⟩, 
+  have pm := prt.2 m hml,
+  split, split,
+  swap 3, exact ⟨m, pm⟩,
+  apply reach_step.bwd_base,
+  split, split, exact hmem, simp, exact hmr,
+  cases m with im lm sgm, simp,
+  apply im.mhtk, 
+  have := pm.psig₁,
+  simp at this, 
+  simp at hmr, rw ←hmr at this,
+  have hneq : some w ≠ none, {intro, contradiction},
+  have hmem := this hneq, 
+  cases w, dsimp [dsig] at hmem,
+  rw ←hw, exact hmem_1 } },
+{rcases hc with ⟨m, pml, pmr⟩,
+ have hdm : desc m rt.1, 
+  {apply tc'.trans, apply tc'.base, 
+   swap 3, exact (⟨cons i l sg, ps⟩ : rmodel).val, 
+   simp, exact pml, exact h₁},
+ cases rt with rt prt,
+ cases rt with irt lrt sgrt,
+ have pm := prt.2 m hdm,
+ split, split, swap 3,
+ exact ⟨m, pm⟩,
+ apply reach_step.fwd_base,
+ exact pml, exact pmr}
+end

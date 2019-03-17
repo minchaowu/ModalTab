@@ -1,5 +1,5 @@
 import .ops
-open subtype nnf model list
+open subtype nnf tmodel list
 
 def unmodal_seqt (Γ : sseqt) : list sseqt :=
 @list.pmap _ _ (λ φ, φ ∉ Γ.h ∧ dia φ ∈ Γ.m)
