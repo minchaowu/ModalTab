@@ -544,7 +544,6 @@ end
 @[simp] def tmodel_anc : Π m : tmodel, Prop 
 | m@(cons i l ba) := ∀ s rq, desc s m → rq ∈ request s →  
                      (rq ∈ manc m) ∨
-                     -- (some rq = msig m) ∨
                      (∃ d, desc d m ∧ some rq = msig d)
 
 structure ptmodel (m : tmodel) : Prop :=
@@ -642,17 +641,26 @@ exact h₂,
 apply rtc.step, exact h₁_a_1, apply h₁_ih, exact h₂
 end
 
+theorem rtc_step {α : Type} {r : α → α → Prop} {a b : α} : 
+r a b → rtc r a b :=
+begin
+intros h,
+apply rtc.step,
+exact h,
+apply rtc.refl
+end
+
 def reach (s₁ s₂ : rmodel) := rtc reach_step s₁ s₂
 
 theorem refl_reach : Π s, reach s s := λ s, rtc.refl _ _
 
 theorem trans_reach : Π s₁ s₂ s₃, reach s₁ s₂ → reach s₂ s₃ → reach s₁ s₃ := λ s₁ s₂ s₃ h₁ h₂, rtc.trans h₁ h₂
 
-def frame : Π m : model, S4 {x : rmodel // x.1 = m.1 ∨ desc x.1 m.1} 
-| m@⟨(cons i l ba), p⟩ := {val := λ v s, var v ∈ htk s.1.1, 
-                          rel := λ s₁ s₂, reach s₁ s₂, 
-                          refl := λ s, refl_reach s, 
-                          trans := λ a b c, trans_reach a b c}
+@[simp] def frame (m : model) : S4 {x : rmodel // x.1 = m.1 ∨ desc x.1 m.1} := 
+{val := λ v s, var v ∈ htk s.1.1, 
+ rel := λ s₁ s₂, reach s₁ s₂, 
+ refl := λ s, refl_reach s, 
+ trans := λ a b c, trans_reach a b c}
 
 open rtc
 
@@ -668,10 +676,10 @@ simp at h₂, exact h₂},
  exact h₁₂, exact h₂}
 end
 
-theorem reach_dia (s : rmodel) (rt : model) (φ) 
+theorem reach_step_dia (s : rmodel) (rt : model) (φ) 
 (h₁ : desc s.1 rt.1) 
 (h₂ : manc rt.1 = []) (h₃ : dia φ ∈ htk s.1) : 
-∃ s', reach_step s s' ∧ φ ∈ htk s'.1 :=
+∃ s', reach_step s s' ∧ φ ∈ htk s'.1 ∧ desc s'.1 rt.1 :=
 begin
 cases s with s ps,
 cases s with i l sg,
@@ -696,15 +704,17 @@ cases hc,
   swap 3, exact ⟨m, pm⟩,
   apply reach_step.bwd_base,
   split, split, exact hmem, simp, exact hmr,
-  cases m with im lm sgm, simp,
-  apply im.mhtk, 
-  have := pm.psig₁,
-  simp at this, 
-  simp at hmr, rw ←hmr at this,
-  have hneq : some w ≠ none, {intro, contradiction},
-  have hmem := this hneq, 
-  cases w, dsimp [dsig] at hmem,
-  rw ←hw, exact hmem_1 } },
+  split,
+  {cases m with im lm sgm, simp,
+   apply im.mhtk, 
+   have := pm.psig₁,
+   simp at this, 
+   simp at hmr, rw ←hmr at this,
+   have hneq : some w ≠ none, {intro, contradiction},
+   have hmem := this hneq, 
+   cases w, dsimp [dsig] at hmem,
+   rw ←hw, exact hmem_1 },
+  {exact hml} } },
 {rcases hc with ⟨m, pml, pmr⟩,
  have hdm : desc m rt.1, 
   {apply tc'.trans, apply tc'.base, 
@@ -716,5 +726,121 @@ cases hc,
  split, split, swap 3,
  exact ⟨m, pm⟩,
  apply reach_step.fwd_base,
- exact pml, exact pmr}
+ exact pml, split,
+ {exact pmr},
+ {exact hdm} }
 end
+
+theorem reach_dia (s : rmodel) (rt : model) (φ) 
+(h₁ : desc s.1 rt.1) 
+(h₂ : manc rt.1 = []) (h₃ : dia φ ∈ htk s.1) : 
+∃ s', reach s s' ∧ φ ∈ htk s'.1 ∧ desc s'.1 rt.1:=
+begin
+have := reach_step_dia s rt φ h₁ h₂ h₃,
+rcases this with ⟨w, hwl, hwr⟩,
+split, split, swap 3, exact w,
+apply rtc_step hwl, exact hwr
+end
+
+theorem reach_step_dia_root (s : rmodel) (rt : model) (φ) 
+(h₁ : s.1 = rt.1) 
+(h₂ : manc rt.1 = []) (h₃ : dia φ ∈ htk s.1) : 
+∃ s', reach_step s s' ∧ φ ∈ htk s'.1 ∧ desc s'.1 rt.1 :=
+begin
+cases s with s ps,
+cases s with is ls sgs,
+have := ps.pdia,
+simp at this, simp at h₃,
+have hc := this _ h₃,
+cases hc,
+{have := ps.sreq, simp at this, 
+ rcases hc with ⟨w, hmw, hw⟩,
+ have hmem := this hmw,
+ cases rt with rt prt,
+ rw ←h₁ at h₂,
+ simp at h₂, rw h₂ at hmem,
+ exfalso, apply list.not_mem_nil, exact hmem},
+{cases rt with rt prt,
+ rcases hc with ⟨w, hwl, hwr⟩,
+ have ptw : ptmodel w, 
+   {apply prt.2, apply tc'.base, simp at h₁, rw ←h₁, simp, exact hwl},
+ split, split, swap 3, exact ⟨w, ptw⟩,
+ apply reach_step.fwd_base, exact hwl, split, 
+ {exact hwr}, 
+ {apply tc'.base, simp, simp at h₁, rw ←h₁, simp, exact hwl} }
+end
+
+theorem reach_dia_root (s : rmodel) (rt : model) (φ) 
+(h₁ : s.1 = rt.1) 
+(h₂ : manc rt.1 = []) (h₃ : dia φ ∈ htk s.1) : 
+∃ s', reach s s' ∧ φ ∈ htk s'.1 ∧ desc s'.1 rt.1 :=
+begin
+have := reach_step_dia_root s rt φ h₁ h₂ h₃,
+rcases this with ⟨w, hwl, hwr⟩,
+split, split, swap 3, exact w,
+apply rtc_step hwl, exact hwr
+end
+
+theorem good_model (m : model) (hrt : manc m.1 = []): 
+Π (s : {x : rmodel // x.1 = m.1 ∨ desc x.1 m.1}) (φ : nnf), 
+  φ ∈ htk s.1.1 → force (frame m) s φ
+| s (var n) h   := begin simp, exact h end
+| s (neg n) h   := begin 
+                     simp, intro hin, 
+                     cases s with s ps,
+                     cases s with s pts,
+                     cases s with i l sg,
+                     have := i.hhtk.hno_contra,
+                     simp at hin,
+                     apply this hin, simp at h, exact h
+                   end
+| s (and φ ψ) h := begin 
+                   split,
+                   {apply good_model, 
+                   cases s with s ps,
+                   cases s with s pts,
+                   cases s with i l sg,
+                   have := i.hhtk.hand_left,
+                   simp, apply this, simp at h, exact h},
+                   {apply good_model, 
+                   cases s with s ps,
+                   cases s with s pts,
+                   cases s with i l sg,
+                   have := i.hhtk.hand_right,
+                   simp, apply this, simp at h, exact h}
+                   end
+| s (or φ ψ) h  := begin
+                   cases s with s ps,
+                   cases s with s pts,
+                   cases s with i l sg,
+                   have := i.hhtk.hor,
+                   simp at h,
+                   have hc := this h,
+                   cases hc,
+                   {simp, left, apply good_model, simp, exact hc},
+                   {simp, right, apply good_model, simp, exact hc}
+                   end
+| s (box φ) h   := begin
+                   intros m hm,
+                   apply good_model,
+                   apply reach_box,
+                   exact hm,
+                   exact h
+                   end
+| s (dia φ) h   := begin
+                   cases s with s ps,
+                   cases ps,
+                   {simp, simp at h,
+                    have := reach_dia_root _ _ _ ps hrt h,
+                    rcases this with ⟨s', hs'l, hs'm, hs'r⟩,
+                    split, split, 
+                    exact hs'l, split, apply good_model, simp,
+                    exact hs'm, right, exact hs'r },
+                   {simp, simp at h,
+                    have := reach_dia _ _ _ ps hrt h,
+                    rcases this with ⟨s', hs'l, hs'm, hs'r⟩,
+                    split, split, 
+                    exact hs'l, split, apply good_model, simp,
+                    exact hs'm, right, exact hs'r}
+                   end
+
