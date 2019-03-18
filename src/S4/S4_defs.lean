@@ -239,6 +239,15 @@ end
 | [] := []
 | (hd::tl) := sub_nnf hd ++ closure tl
 
+theorem mem_closure_self : Π Γ : list nnf, Γ ⊆ closure Γ
+| [] := λ x h, absurd h $ list.not_mem_nil _
+| (hd::tl) := 
+begin 
+intros x hx, cases hx, 
+{rw hx, simp, left, apply mem_sub_nnf_self},
+{simp, right, apply mem_closure_self, exact hx} 
+end
+
 theorem mem_closure_and {φ ψ : nnf} : Π Γ : list nnf, and φ ψ ∈ closure Γ → φ ∈ closure Γ ∧ ψ ∈ closure Γ
 | [] h := absurd h $ list.not_mem_nil _
 | (hd::tl) h := 
@@ -307,6 +316,12 @@ theorem nil_subperm {l : list α} : [] <+~ l :=
 
 end list
 
+instance (Γ) : decidable_eq (no_literals Γ) := by tactic.mk_dec_eq_instance
+
+instance (Γ) : decidable_eq (saturated Γ) := by tactic.mk_dec_eq_instance
+
+instance (Γ) : decidable_eq (box_only Γ) := by tactic.mk_dec_eq_instance
+
 structure sseqt : Type :=
 (goal : list nnf)
 (s : sig)
@@ -317,8 +332,24 @@ structure sseqt : Type :=
 (sph : h <+~ closure goal)
 (spb : b <+~ closure goal)
 (sbm : m ⊆ closure goal)
+(ha : ∀ φ ∈ h, (⟨φ, b⟩ : psig) ∈ a)
+(hb : box_only b)
+(ps₁ : Π (h : s ≠ none), dsig s h ∈ m)
+(ps₂ : Π (h : s ≠ none), bsig s h ⊆ m)
 
 instance : decidable_eq sseqt := by tactic.mk_dec_eq_instance
+
+class val_constructible (Γ : sseqt) :=
+(satu : saturated Γ.m)
+(no_box_main : ∀ {φ}, box φ ∉ Γ.m)
+(no_contra_main : ∀ {n}, var n ∈ Γ.m → neg n ∉ Γ.m)
+
+class modal_applicable (Γ : sseqt) extends val_constructible Γ :=
+(φ : nnf)
+(ex : dia φ ∈ Γ.m)
+
+class model_constructible (Γ : sseqt) extends val_constructible Γ :=
+(no_dia : ∀ {φ}, nnf.dia φ ∉ Γ.m)
 
 def sseqt_size (s : sseqt) : ℕ × ℕ × ℕ := 
 ((closure s.goal).length - s.b.length, 
@@ -342,11 +373,61 @@ def and_child {φ ψ} (Γ : sseqt) (h : nnf.and φ ψ ∈ Γ.m) : sseqt :=
           {cases hx, 
            {rw hx, apply (mem_closure_and _ (Γ.sbm h)).2},
            {apply Γ.sbm, apply list.erase_subset, exact hx}}
-         end }
+         end,
+  ha := Γ.ha,
+  hb := Γ.hb,
+  ps₁ := by intro; contradiction,
+  ps₂ := by intro; contradiction}
 
 inductive and_instance_seqt (Γ : sseqt) : sseqt → Type
 | cons : Π {φ ψ} (h : nnf.and φ ψ ∈ Γ.m), 
          and_instance_seqt $ and_child Γ h
+
+def or_child_left {φ ψ} (Γ : sseqt) (h : nnf.or φ ψ ∈ Γ.m) : sseqt :=
+{ goal := Γ.goal, 
+  s := none,
+  a := Γ.a, 
+  h := Γ.h, 
+  b := Γ.b, 
+  m := φ :: Γ.m.erase (or φ ψ),
+  ndh := Γ.ndh,
+  ndb := Γ.ndb,
+  sph := Γ.sph,
+  spb := Γ.spb,
+  sbm := begin 
+          intros x hx, cases hx, 
+          {rw hx, apply (mem_closure_or _ (Γ.sbm h)).1}, 
+          {apply Γ.sbm, apply list.erase_subset, exact hx}
+         end,
+  ha := Γ.ha,
+  hb := Γ.hb,
+  ps₁ := by intro; contradiction,
+  ps₂ := by intro; contradiction}
+
+def or_child_right {φ ψ} (Γ : sseqt) (h : nnf.or φ ψ ∈ Γ.m) : sseqt :=
+{ goal := Γ.goal, 
+  s := none,
+  a := Γ.a, 
+  h := Γ.h, 
+  b := Γ.b, 
+  m := ψ :: Γ.m.erase (or φ ψ),
+  ndh := Γ.ndh,
+  ndb := Γ.ndb,
+  sph := Γ.sph,
+  spb := Γ.spb,
+  sbm := begin 
+          intros x hx, cases hx, 
+          {rw hx, apply (mem_closure_or _ (Γ.sbm h)).2}, 
+          {apply Γ.sbm, apply list.erase_subset, exact hx}
+         end,
+  ha := Γ.ha,
+  hb := Γ.hb,
+  ps₁ := by intro; contradiction,
+  ps₂ := by intro; contradiction}
+
+inductive or_instance_seqt (Γ : sseqt) : sseqt → sseqt → Type
+| cons : Π {φ ψ} (h : nnf.or φ ψ ∈ Γ.m),
+         or_instance_seqt (or_child_left Γ h) (or_child_right Γ h)
 
 def box_child_new {φ} (Γ : sseqt) (h₁ : nnf.box φ ∈ Γ.m) (h₂ : nnf.box φ ∉ Γ.b) : sseqt :=
 { goal := Γ.goal, 
@@ -366,7 +447,15 @@ def box_child_new {φ} (Γ : sseqt) (h₁ : nnf.box φ ∈ Γ.m) (h₂ : nnf.box
            intros x hx, cases hx, 
            {rw hx, apply mem_closure_box _ (Γ.sbm h₁)}, 
            {apply Γ.sbm, apply list.erase_subset, exact hx}
-         end }
+         end,
+  ha := λ φ h, absurd h $ list.not_mem_nil _,
+  hb := cons_box_only Γ.hb,
+  ps₁ := by intro; contradiction,
+  ps₂ := by intro; contradiction}
+
+inductive box_new_instance_seqt (Γ : sseqt) : sseqt → Type
+| cons : Π {φ} (h₁ : nnf.box φ ∈ Γ.m) (h₂ : nnf.box φ ∉ Γ.b), 
+         box_new_instance_seqt $ box_child_new Γ h₁ h₂
 
 def box_child {φ} (Γ : sseqt) (h₁ : nnf.box φ ∈ Γ.m) : sseqt :=
 { goal := Γ.goal, 
@@ -383,7 +472,15 @@ def box_child {φ} (Γ : sseqt) (h₁ : nnf.box φ ∈ Γ.m) : sseqt :=
            intros x hx, cases hx, 
            {rw hx, apply mem_closure_box _ (Γ.sbm h₁)}, 
            {apply Γ.sbm, apply list.erase_subset, exact hx}
-         end }
+         end,
+  ha := Γ.ha,
+  hb := Γ.hb,
+  ps₁ := by intro; contradiction,
+  ps₂ := by intro; contradiction}
+
+inductive box_dup_instance_seqt (Γ : sseqt) : sseqt → Type
+| cons : Π {φ} (h : nnf.box φ ∈ Γ.m), 
+         box_dup_instance_seqt $ box_child Γ h
 
 @[simp] def filter_undia (l : list nnf) : list nnf → list nnf
 | [] := []
@@ -455,7 +552,7 @@ instance : decidable_eq tmodel := by tactic.mk_dec_eq_instance
 
 open tmodel
 
-def minfo : Π m : tmodel, info
+@[simp] def minfo : Π m : tmodel, info
 | (cons i l ba) := i
 
 @[simp] def htk : Π m : tmodel, list nnf
@@ -482,7 +579,7 @@ def bhist : Π m : tmodel, list nnf
 @[simp] def subset_request : Π m : tmodel, Prop
 | (cons i l ba) := ba ⊆ i.Γ.a
 
-def tmodel_step_bhist : Π m : tmodel, Prop 
+@[simp] def tmodel_step_bhist : Π m : tmodel, Prop 
 | m@(cons i l ba) := ∀ s ∈ l, ∀ φ, box φ ∈ i.Γ.b → box φ ∈ htk s
 
 @[simp] def tmodel_step_box : Π m : tmodel, Prop 
@@ -491,17 +588,17 @@ def tmodel_step_bhist : Π m : tmodel, Prop
 @[simp] def tmodel_dia : Π m : tmodel, Prop 
 | m@(cons i l ba) := ∀ φ, dia φ ∈ i.htk → (∃ rq : psig, rq ∈ ba ∧ rq.d = φ) ∨ ∃ s ∈ l, φ ∈ htk s
 
-@[simp] def pmsig_dia : Π m : tmodel, Prop
-| m@(cons i l ba) := Π (h : i.Γ.s ≠ none), dsig i.Γ.s h ∈ i.Γ.m
+-- @[simp] def pmsig_dia : Π m : tmodel, Prop
+-- | m@(cons i l ba) := Π (h : i.Γ.s ≠ none), dsig i.Γ.s h ∈ i.Γ.m
 
-@[simp] def pmsig_box : Π m : tmodel, Prop
-| m@(cons i l ba) := Π (h : i.Γ.s ≠ none), bsig i.Γ.s h ⊆ i.Γ.m
+-- @[simp] def pmsig_box : Π m : tmodel, Prop
+-- | m@(cons i l ba) := Π (h : i.Γ.s ≠ none), bsig i.Γ.s h ⊆ i.Γ.m
 
 @[simp] def child : tmodel → tmodel → bool
 | s (cons i l ba) := s ∈ l
 
 inductive tc' {α : Type} (r : α → α → Prop) : α → α → Prop
-| base  : ∀ a b, r a b → tc' a b
+| base : ∀ a b, r a b → tc' a b
 | step : ∀ a b c, r a b → tc' b c → tc' a c
 
 theorem tc'.trans {α : Type} {r : α → α → Prop} {a b c : α} : 
@@ -522,6 +619,28 @@ induction h,
 {rw heq at h_a_1, simp at h_a_1, exact h_a_1},
 {apply h_ih, exact heq}
 end
+
+theorem desc_iff_eq_child_aux : Π i₁ i₂ s₁ s₂ l₁ l₂ m₁ m₂ m₃, 
+m₁ = cons i₁ l₁ s₁ → m₂ = cons i₂ l₂ s₂ → l₁ = l₂ → 
+(desc m₃ m₁ ↔ desc m₃ m₂) :=
+begin
+intros i₁ i₂ s₁ s₂ l₁ l₂ m₁ m₂ m₃ heq₁ heq₂ heq,
+split,
+{intro hd, induction hd,
+ {rw heq₁ at hd_a_1, simp at hd_a_1,
+ rw heq at hd_a_1,
+ apply tc'.base, rw heq₂, simp, exact hd_a_1},
+ {apply tc'.trans, apply tc'.base, exact hd_a_1, apply hd_ih, exact heq₁}},
+{intro hd, induction hd,
+ {rw heq₂ at hd_a_1, simp at hd_a_1,
+ rw ←heq at hd_a_1,
+ apply tc'.base, rw heq₁, simp, exact hd_a_1},
+ {apply tc'.trans, apply tc'.base, exact hd_a_1, apply hd_ih, exact heq₂}}
+end
+
+theorem eq_desc_of_eq_children {i₁ i₂ s₁ s₂ l c} : 
+desc c (cons i₁ l s₁) = desc c (cons i₂ l s₂) :=
+begin rw desc_iff_eq_child_aux, repeat {refl} end 
 
 theorem desc_step : Π c i l ba, c ∈ l → desc c (cons i l ba)
 | c i [] ba h := absurd h $ list.not_mem_nil _
@@ -565,8 +684,6 @@ structure ptmodel (m : tmodel) : Prop :=
 (sbox : tmodel_step_box m)
 (pdia : tmodel_dia m)
 (bdia : tmodel_anc m)
-(psig₁ : pmsig_dia m)
-(psig₂ : pmsig_box m)
 (reqb : proper_request_box m)
 (sreq : subset_request m)
 
@@ -575,6 +692,8 @@ def global_pt (m : tmodel) := ∀ s, desc s m → ptmodel s
 open subtype
 
 def model : Type := {m : tmodel // ptmodel m ∧ global_pt m}
+
+def model' (Γ : sseqt) : Type := {m : tmodel // ptmodel m ∧ global_pt m ∧ (minfo m).Γ = Γ}
 
 def rmodel : Type := {m : tmodel // ptmodel m}
 
@@ -600,8 +719,8 @@ cases h₁,
  rcases h₁_a with ⟨w,hmem,hw⟩,
  simp at hw,
  apply i₂.mhtk,
- have := ps₂.psig₂,
- simp at this, rw ←hw at this,
+ have := i₂.Γ.ps₂,
+ rw ←hw at this,
  have hneq : some w ≠ none, 
    {intro heq, contradiction},
  have hsub := this hneq,
@@ -629,8 +748,8 @@ cases h₁,
  rcases h₁_a with ⟨w,hmem,hw⟩,
  simp at hw,
  apply i₂.mhtk,
- have := ps₂.psig₂,
- simp at this, rw ←hw at this,
+ have := i₂.Γ.ps₂,
+ rw ←hw at this,
  have hneq : some w ≠ none, 
    {intro heq, contradiction},
  have hsub := this hneq,
@@ -676,6 +795,12 @@ theorem trans_reach : Π s₁ s₂ s₃, reach s₁ s₂ → reach s₂ s₃ →
  refl := λ s, refl_reach s, 
  trans := λ a b c, trans_reach a b c}
 
+@[simp] def frame' {Γ} (m : model' Γ) : S4 {x : rmodel // x.1 = m.1 ∨ desc x.1 m.1} := 
+{val := λ v s, var v ∈ htk s.1.1, 
+ rel := λ s₁ s₂, reach s₁ s₂, 
+ refl := λ s, refl_reach s, 
+ trans := λ a b c, trans_reach a b c}
+
 open rtc
 
 theorem reach_box (s₁ s₂ φ) (h₁ : reach s₁ s₂) (h₂ : box φ ∈ htk s₁.1) : φ ∈ htk s₂.1 :=
@@ -690,7 +815,7 @@ simp at h₂, exact h₂},
  exact h₁₂, exact h₂}
 end
 
-theorem reach_step_dia (s : rmodel) (rt : model) (φ) 
+theorem reach_step_dia {Γ} (s : rmodel) (rt : model' Γ) (φ) 
 (h₁ : desc s.1 rt.1) 
 (h₂ : manc rt.1 = []) (h₃ : dia φ ∈ htk s.1) : 
 ∃ s', reach_step s s' ∧ φ ∈ htk s'.1 ∧ desc s'.1 rt.1 :=
@@ -713,7 +838,7 @@ cases hc,
  cases hcc,
  {rw h₂ at hcc, exfalso, apply list.not_mem_nil, exact hcc},
  {rcases hcc with ⟨m, hml, hmr⟩, 
-  have pm := prt.2 m hml,
+  have pm := prt.2.1 m hml,
   split, split,
   swap 3, exact ⟨m, pm⟩,
   apply reach_step.bwd_base,
@@ -721,8 +846,7 @@ cases hc,
   split,
   {cases m with im lm sgm, simp,
    apply im.mhtk, 
-   have := pm.psig₁,
-   simp at this, 
+   have := im.Γ.ps₁,
    simp at hmr, rw ←hmr at this,
    have hneq : some w ≠ none, {intro, contradiction},
    have hmem := this hneq, 
@@ -736,7 +860,7 @@ cases hc,
    simp, exact pml, exact h₁},
  cases rt with rt prt,
  cases rt with irt lrt sgrt,
- have pm := prt.2 m hdm,
+ have pm := prt.2.1 m hdm,
  split, split, swap 3,
  exact ⟨m, pm⟩,
  apply reach_step.fwd_base,
@@ -745,7 +869,7 @@ cases hc,
  {exact hdm} }
 end
 
-theorem reach_dia (s : rmodel) (rt : model) (φ) 
+theorem reach_dia {Γ} (s : rmodel) (rt : model' Γ) (φ) 
 (h₁ : desc s.1 rt.1) 
 (h₂ : manc rt.1 = []) (h₃ : dia φ ∈ htk s.1) : 
 ∃ s', reach s s' ∧ φ ∈ htk s'.1 ∧ desc s'.1 rt.1:=
@@ -756,7 +880,7 @@ split, split, swap 3, exact w,
 apply rtc_step hwl, exact hwr
 end
 
-theorem reach_step_dia_root (s : rmodel) (rt : model) (φ) 
+theorem reach_step_dia_root {Γ} (s : rmodel) (rt : model' Γ) (φ) 
 (h₁ : s.1 = rt.1) 
 (h₂ : manc rt.1 = []) (h₃ : dia φ ∈ htk s.1) : 
 ∃ s', reach_step s s' ∧ φ ∈ htk s'.1 ∧ desc s'.1 rt.1 :=
@@ -777,14 +901,14 @@ cases hc,
 {cases rt with rt prt,
  rcases hc with ⟨w, hwl, hwr⟩,
  have ptw : ptmodel w, 
-   {apply prt.2, apply tc'.base, simp at h₁, rw ←h₁, simp, exact hwl},
+   {apply prt.2.1, apply tc'.base, simp at h₁, rw ←h₁, simp, exact hwl},
  split, split, swap 3, exact ⟨w, ptw⟩,
  apply reach_step.fwd_base, exact hwl, split, 
  {exact hwr}, 
  {apply tc'.base, simp, simp at h₁, rw ←h₁, simp, exact hwl} }
 end
 
-theorem reach_dia_root (s : rmodel) (rt : model) (φ) 
+theorem reach_dia_root {Γ} (s : rmodel) (rt : model' Γ) (φ) 
 (h₁ : s.1 = rt.1) 
 (h₂ : manc rt.1 = []) (h₃ : dia φ ∈ htk s.1) : 
 ∃ s', reach s s' ∧ φ ∈ htk s'.1 ∧ desc s'.1 rt.1 :=
@@ -795,9 +919,9 @@ split, split, swap 3, exact w,
 apply rtc_step hwl, exact hwr
 end
 
-theorem good_model (m : model) (hrt : manc m.1 = []): 
+theorem good_model {Γ} (m : model' Γ) (hrt : manc m.1 = []): 
 Π (s : {x : rmodel // x.1 = m.1 ∨ desc x.1 m.1}) (φ : nnf), 
-  φ ∈ htk s.1.1 → force (frame m) s φ
+  φ ∈ htk s.1.1 → force (frame' m) s φ
 | s (var n) h   := begin simp, exact h end
 | s (neg n) h   := begin 
                      simp, intro hin, 
@@ -1082,4 +1206,12 @@ begin
    {apply h, apply mem_append_right, exact this}}
 end
 
+-- theorem unsat_of_unsat_dia
+--         (h₁ : box φ ∈ Δ) (h₂ : box φ ∈ Λ)
+--         (h₃ : unsatisfiable $ (φ :: Δ.erase (box φ)) ++ Λ) : 
+--         unsatisfiable (Δ ++ Λ) :=
+
+
 end
+
+-- theorem build_model : Π Γ (h : model_constructible Γ), model := _

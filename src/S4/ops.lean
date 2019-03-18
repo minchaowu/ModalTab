@@ -32,6 +32,19 @@ end
 | []       h := by contradiction
 | (a :: l) h := a
 
+theorem mem_pmap_of_mem {p : α → Prop} (f : Π a, p a → β) {a : α} {l : list α} (h : a ∈ l) (hf : ∀ y ∈ l, p y) : 
+f a (hf a h) ∈ pmap f l hf :=
+begin
+  induction l with b l' ih,
+  {cases h},
+  {rcases h with rfl | h,
+    {exact or.inl rfl},
+    {apply or.inr,
+     have hpy : ∀ (y : α), y ∈ l' → p y, 
+       {intros y hy, apply hf, right, exact hy},
+     have := ih h hpy, exact this}}
+end
+
 end list
 
 @[simp] def unbox : list nnf → list nnf

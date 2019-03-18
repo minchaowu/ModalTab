@@ -82,27 +82,21 @@ begin
   apply nat.succ_pos
 end
 
--- theorem split_lt_or_seqt_left {φ ψ} (Γ : seqt) (h : nnf.or φ ψ ∈ Γ.main) :
--- prod.measure_lex seqt_size (or_child_left Γ h) Γ :=
--- begin
---   have hmem : or φ ψ ∈ Γ.main ++ Γ.hdld, {apply mem_append_left _ h},
---   have := lt_or_eq_of_le (split_le_or_degree_left _ hmem),
---   cases this,
---   {left, simp only [seqt_size, or_child_left],  rw erase_append_left at this, rw cons_append, exact this, exact h},
---   {dsimp only [prod.measure_lex, inv_image, seqt_size], rw [erase_append_left _ h] at this, rw ←this, right,
---    apply split_lt_or_size_left _ h}
--- end
+theorem split_lt_or_seqt_left {φ ψ} (Γ : sseqt) (h : nnf.or φ ψ ∈ Γ.m) :
+prod.measure_lex' sseqt_size (or_child_left Γ h) Γ :=
+begin
+right, right,
+simp only [or_child_left],
+apply split_lt_or_size_left _ h
+end
 
--- theorem split_lt_or_seqt_right {φ ψ} (Γ : seqt) (h : nnf.or φ ψ ∈ Γ.main) :
--- prod.measure_lex seqt_size (or_child_right Γ h) Γ :=
--- begin
---   have hmem : or φ ψ ∈ Γ.main ++ Γ.hdld, {apply mem_append_left _ h},
---   have := lt_or_eq_of_le (split_le_or_degree_right _ hmem),
---   cases this,
---   {left, simp only [seqt_size, or_child_right],  rw erase_append_left at this, rw cons_append, exact this, exact h},
---   {dsimp only [prod.measure_lex, inv_image, seqt_size], rw [erase_append_left _ h] at this, rw ←this, right,
---    apply split_lt_or_size_right _ h}
--- end
+theorem split_lt_or_seqt_right {φ ψ} (Γ : sseqt) (h : nnf.or φ ψ ∈ Γ.m) :
+prod.measure_lex' sseqt_size (or_child_right Γ h) Γ :=
+begin
+right, right,
+simp only [or_child_right],
+apply split_lt_or_size_right _ h
+end
 
 theorem copy_lt_size {φ} (Γ : list nnf) (h : nnf.box φ ∈ Γ) :
 node_size (φ :: Γ.erase (nnf.box φ)) < node_size Γ := 
