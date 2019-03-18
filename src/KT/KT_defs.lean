@@ -376,13 +376,6 @@ inductive or_instance_seqt (Γ : seqt) : seqt → seqt → Type
 | cons : Π {φ ψ} (h : nnf.or φ ψ ∈ Γ.main),
          or_instance_seqt (or_child_left Γ h) (or_child_right Γ h)
 
-def cons_box_only {φ Γ} (h : box_only Γ) : box_only (box φ :: Γ) := 
-{no_var := begin intros n hn, cases hn, contradiction, apply h.no_var, exact hn end, 
-no_neg := begin intros n hn, cases hn, contradiction, apply h.no_neg, exact hn end, 
-no_and := begin intros ψ₁ ψ₂ hψ, cases hψ, contradiction, apply h.no_and, exact hψ end, 
-no_or := begin intros ψ₁ ψ₂ hψ, cases hψ, contradiction, apply h.no_or, exact hψ end, 
-no_dia := begin intros n hn, cases hn, contradiction, apply h.no_dia, exact hn end}
-
 def box_child {φ} (Γ : seqt) (h : nnf.box φ ∈ Γ.main) : seqt :=
 ⟨φ :: Γ.main.erase (box φ), box φ :: Γ.hdld, 
 begin 

@@ -36,6 +36,13 @@ no_and := λ φ ψ hn, absurd hn $ list.not_mem_nil _,
 no_or := λ φ ψ hn, absurd hn $ list.not_mem_nil _, 
 no_dia := λ n hn, absurd hn $ list.not_mem_nil _}
 
+def cons_box_only {φ Γ} (h : box_only Γ) : box_only (box φ :: Γ) := 
+{no_var := begin intros n hn, cases hn, contradiction, apply h.no_var, exact hn end, 
+no_neg := begin intros n hn, cases hn, contradiction, apply h.no_neg, exact hn end, 
+no_and := begin intros ψ₁ ψ₂ hψ, cases hψ, contradiction, apply h.no_and, exact hψ end, 
+no_or := begin intros ψ₁ ψ₂ hψ, cases hψ, contradiction, apply h.no_or, exact hψ end, 
+no_dia := begin intros n hn, cases hn, contradiction, apply h.no_dia, exact hn end}
+
 def box_only_ex : Π {φ Γ} (h₁ : box_only Γ) (h₂ : φ ∈ Γ), ∃ ψ, φ = box ψ 
 | (var n) Γ h₁ h₂   := begin exfalso, apply h₁.no_var, exact h₂ end
 | (neg n) Γ h₁ h₂   := begin exfalso, apply h₁.no_neg, exact h₂ end
