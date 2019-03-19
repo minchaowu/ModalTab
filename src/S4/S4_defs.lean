@@ -479,8 +479,8 @@ def box_child {φ} (Γ : sseqt) (h₁ : nnf.box φ ∈ Γ.m) : sseqt :=
   ps₂ := by intro; contradiction}
 
 inductive box_dup_instance_seqt (Γ : sseqt) : sseqt → Type
-| cons : Π {φ} (h : nnf.box φ ∈ Γ.m), 
-         box_dup_instance_seqt $ box_child Γ h
+| cons : Π {φ} (h₁ : nnf.box φ ∈ Γ.m) (h₂ : nnf.box φ ∈ Γ.b), 
+         box_dup_instance_seqt $ box_child Γ h₁
 
 @[simp] def filter_undia (l : list nnf) : list nnf → list nnf
 | [] := []
@@ -537,6 +537,19 @@ structure hintikka (Γ : list nnf) : Prop :=
 (hor : ∀ {φ ψ}, nnf.or φ ψ ∈ Γ → φ ∈ Γ ∨ ψ ∈ Γ)
 (hbox : ∀ {φ}, nnf.box φ ∈ Γ → φ ∈ Γ)
 
+theorem hintikka_vc {Γ} (h : val_constructible Γ) : hintikka Γ.m :=
+{hno_contra := h.no_contra_main,
+ hand_left := begin intros φ ψ h₁, exfalso, apply h.satu.no_and, exact h₁ end,
+ hand_right := begin intros φ ψ h₁, exfalso, apply h.satu.no_and, exact h₁ end,
+ hor := begin intros φ ψ h₁, exfalso, apply h.satu.no_or, exact h₁ end,
+ hbox := begin intros φ h₁, exfalso, apply h.no_box_main, exact h₁ end}
+
+theorem hintikka_ma {Γ} (h : modal_applicable Γ) : hintikka Γ.m :=
+hintikka_vc h.to_val_constructible
+
+theorem hintikka_mc {Γ} (h : model_constructible Γ) : hintikka Γ.m :=
+hintikka_vc h.to_val_constructible
+
 structure info : Type :=
 (Γ : sseqt)
 (htk : list nnf)
@@ -585,14 +598,9 @@ def bhist : Π m : tmodel, list nnf
 @[simp] def tmodel_step_box : Π m : tmodel, Prop 
 | m@(cons i l ba) := ∀ s ∈ l, ∀ φ, box φ ∈ i.htk → box φ ∈ htk s
 
+-- Can be strenghtened
 @[simp] def tmodel_dia : Π m : tmodel, Prop 
 | m@(cons i l ba) := ∀ φ, dia φ ∈ i.htk → (∃ rq : psig, rq ∈ ba ∧ rq.d = φ) ∨ ∃ s ∈ l, φ ∈ htk s
-
--- @[simp] def pmsig_dia : Π m : tmodel, Prop
--- | m@(cons i l ba) := Π (h : i.Γ.s ≠ none), dsig i.Γ.s h ∈ i.Γ.m
-
--- @[simp] def pmsig_box : Π m : tmodel, Prop
--- | m@(cons i l ba) := Π (h : i.Γ.s ≠ none), bsig i.Γ.s h ⊆ i.Γ.m
 
 @[simp] def child : tmodel → tmodel → bool
 | s (cons i l ba) := s ∈ l
@@ -673,6 +681,9 @@ induction h,
  {right, split, split, exact h, apply tc'.base, exact h_a_1},
  {rcases h with ⟨w, hmem, hw⟩, right, split, split, exact hmem, apply tc'.step, exact h_a_1, exact hw}}
 end
+
+theorem ex_desc' : Π c i l ba, desc c (cons i l ba) → (c ∈ l ∨ ∃ m ∈ l, desc c m) := 
+begin intros c i l ba h, apply ex_desc, repeat {refl}, exact h end
 
 @[simp] def tmodel_anc : Π m : tmodel, Prop 
 | m@(cons i l ba) := ∀ s rq, desc s m → rq ∈ request s →  
@@ -1192,7 +1203,7 @@ begin
 end
 
 theorem unsat_of_unsat_box_dup
-        (h₁ : box φ ∈ Δ) (h₂ : box φ ∈ Λ)
+        (h₁ : box φ ∈ Δ)
         (h₃ : unsatisfiable $ (φ :: Δ.erase (box φ)) ++ Λ) : 
         unsatisfiable (Δ ++ Λ) :=
 begin
@@ -1205,11 +1216,6 @@ begin
    {apply h, apply mem_append_left, apply mem_of_mem_erase this},
    {apply h, apply mem_append_right, exact this}}
 end
-
--- theorem unsat_of_unsat_dia
---         (h₁ : box φ ∈ Δ) (h₂ : box φ ∈ Λ)
---         (h₃ : unsatisfiable $ (φ :: Δ.erase (box φ)) ++ Λ) : 
---         unsatisfiable (Δ ++ Λ) :=
 
 
 end

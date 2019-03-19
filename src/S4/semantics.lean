@@ -60,7 +60,7 @@ intros ψ hψ, simp at hψ, cases hψ,
 end
 _
 
-def unsat_of_unsat_unmodal {Γ : sseqt} (h : modal_applicable Γ) (i : sseqt) : i ∈ unmodal_seqt Γ ∧ unsatisfiable (i.m ++ i.b) → unsatisfiable (Γ.m ++ Γ.b) := 
+def unsat_of_unsat_unmodal {Γ : sseqt} (i : sseqt) : i ∈ unmodal_seqt Γ ∧ unsatisfiable (i.m ++ i.b) → unsatisfiable (Γ.m ++ Γ.b) := 
 begin
   intro hex, intros st k s h,
   have := sat_unmodal_of_sat i hex.1 k s h,
@@ -68,6 +68,9 @@ begin
   have := hex.2,
   exact this _ _ _ hw
 end
+
+def unmodal_mem_box (Γ : sseqt) : ∀ (i : sseqt),  i ∈ unmodal_seqt Γ → (∀ φ, box φ ∈ Γ.b → box φ ∈ i.m) := 
+list.pmapp _ _ begin intros φ h hmem ψ hψ, right, exact hψ end _
 
 def mem_unmodal_seqt (Γ : sseqt) (φ) (h : φ ∉ Γ.h ∧ dia φ ∈ Γ.m) : ∃ (i : sseqt), i ∈ unmodal_seqt Γ ∧ φ ∈ i.m := 
 begin
@@ -113,6 +116,17 @@ ps₂ := begin intro, simp [bsig] end
 { by simp } }
 end
 
+theorem unmodal_sig (Γ : sseqt) : ∀ (i : sseqt),  i ∈ unmodal_seqt Γ → (∀ a, a ∈ i.a → some a = i.s ∨ a ∈ Γ.a) := 
+list.pmapp _ _ 
+begin 
+intros φ h hmem a ha, simp at ha,
+cases ha,
+{left, simp, exact ha},
+{right, exact ha}
+end 
+_
+
+
 theorem unsat_of_closed_and {Γ Δ} (i : and_instance Γ Δ) (h : unsatisfiable Δ) : unsatisfiable Γ := 
 by cases i; { apply unsat_and_of_unsat_split, repeat {assumption} }
 
@@ -128,3 +142,15 @@ unsatisfiable (Δ.m++Δ.b) :=
 begin
 cases i, {apply unsat_or_of_unsat_split_seqt, repeat {assumption}}
 end
+
+theorem unsat_of_closed_box_new {Γ Δ} (i : box_new_instance_seqt Γ Δ) (h : unsatisfiable $ (Δ.m++Δ.b)) : unsatisfiable (Γ.m++Γ.b) := 
+begin
+cases i, {apply unsat_of_unsat_box_new, repeat {assumption} }
+end
+
+theorem unsat_of_closed_box_dup {Γ Δ} (i : box_dup_instance_seqt Γ Δ) (h : unsatisfiable $ (Δ.m++Δ.b)) : unsatisfiable (Γ.m++Γ.b) := 
+begin
+cases i, {apply unsat_of_unsat_box_dup, repeat {assumption}}
+end
+
+
