@@ -704,7 +704,7 @@ open subtype
 
 def model : Type := {m : tmodel // ptmodel m ∧ global_pt m}
 
-def model' (Γ : sseqt) : Type := {m : tmodel // ptmodel m ∧ global_pt m ∧ (minfo m).Γ = Γ}
+-- def model' (Γ : sseqt) : Type := {m : tmodel // ptmodel m ∧ global_pt m ∧ (minfo m).Γ = Γ}
 
 def rmodel : Type := {m : tmodel // ptmodel m}
 
@@ -806,11 +806,11 @@ theorem trans_reach : Π s₁ s₂ s₃, reach s₁ s₂ → reach s₂ s₃ →
  refl := λ s, refl_reach s, 
  trans := λ a b c, trans_reach a b c}
 
-@[simp] def frame' {Γ} (m : model' Γ) : S4 {x : rmodel // x.1 = m.1 ∨ desc x.1 m.1} := 
-{val := λ v s, var v ∈ htk s.1.1, 
- rel := λ s₁ s₂, reach s₁ s₂, 
- refl := λ s, refl_reach s, 
- trans := λ a b c, trans_reach a b c}
+-- @[simp] def frame' {Γ} (m : model' Γ) : S4 {x : rmodel // x.1 = m.1 ∨ desc x.1 m.1} := 
+-- {val := λ v s, var v ∈ htk s.1.1, 
+--  rel := λ s₁ s₂, reach s₁ s₂, 
+--  refl := λ s, refl_reach s, 
+--  trans := λ a b c, trans_reach a b c}
 
 open rtc
 
@@ -826,7 +826,7 @@ simp at h₂, exact h₂},
  exact h₁₂, exact h₂}
 end
 
-theorem reach_step_dia {Γ} (s : rmodel) (rt : model' Γ) (φ) 
+theorem reach_step_dia (s : rmodel) (rt : model) (φ) 
 (h₁ : desc s.1 rt.1) 
 (h₂ : manc rt.1 = []) (h₃ : dia φ ∈ htk s.1) : 
 ∃ s', reach_step s s' ∧ φ ∈ htk s'.1 ∧ desc s'.1 rt.1 :=
@@ -849,7 +849,7 @@ cases hc,
  cases hcc,
  {rw h₂ at hcc, exfalso, apply list.not_mem_nil, exact hcc},
  {rcases hcc with ⟨m, hml, hmr⟩, 
-  have pm := prt.2.1 m hml,
+  have pm := prt.2 m hml,
   split, split,
   swap 3, exact ⟨m, pm⟩,
   apply reach_step.bwd_base,
@@ -871,7 +871,7 @@ cases hc,
    simp, exact pml, exact h₁},
  cases rt with rt prt,
  cases rt with irt lrt sgrt,
- have pm := prt.2.1 m hdm,
+ have pm := prt.2 m hdm,
  split, split, swap 3,
  exact ⟨m, pm⟩,
  apply reach_step.fwd_base,
@@ -880,7 +880,7 @@ cases hc,
  {exact hdm} }
 end
 
-theorem reach_dia {Γ} (s : rmodel) (rt : model' Γ) (φ) 
+theorem reach_dia (s : rmodel) (rt : model) (φ) 
 (h₁ : desc s.1 rt.1) 
 (h₂ : manc rt.1 = []) (h₃ : dia φ ∈ htk s.1) : 
 ∃ s', reach s s' ∧ φ ∈ htk s'.1 ∧ desc s'.1 rt.1:=
@@ -891,7 +891,7 @@ split, split, swap 3, exact w,
 apply rtc_step hwl, exact hwr
 end
 
-theorem reach_step_dia_root {Γ} (s : rmodel) (rt : model' Γ) (φ) 
+theorem reach_step_dia_root (s : rmodel) (rt : model) (φ) 
 (h₁ : s.1 = rt.1) 
 (h₂ : manc rt.1 = []) (h₃ : dia φ ∈ htk s.1) : 
 ∃ s', reach_step s s' ∧ φ ∈ htk s'.1 ∧ desc s'.1 rt.1 :=
@@ -912,14 +912,14 @@ cases hc,
 {cases rt with rt prt,
  rcases hc with ⟨w, hwl, hwr⟩,
  have ptw : ptmodel w, 
-   {apply prt.2.1, apply tc'.base, simp at h₁, rw ←h₁, simp, exact hwl},
+   {apply prt.2, apply tc'.base, simp at h₁, rw ←h₁, simp, exact hwl},
  split, split, swap 3, exact ⟨w, ptw⟩,
  apply reach_step.fwd_base, exact hwl, split, 
  {exact hwr}, 
  {apply tc'.base, simp, simp at h₁, rw ←h₁, simp, exact hwl} }
 end
 
-theorem reach_dia_root {Γ} (s : rmodel) (rt : model' Γ) (φ) 
+theorem reach_dia_root (s : rmodel) (rt : model) (φ) 
 (h₁ : s.1 = rt.1) 
 (h₂ : manc rt.1 = []) (h₃ : dia φ ∈ htk s.1) : 
 ∃ s', reach s s' ∧ φ ∈ htk s'.1 ∧ desc s'.1 rt.1 :=
@@ -930,9 +930,9 @@ split, split, swap 3, exact w,
 apply rtc_step hwl, exact hwr
 end
 
-theorem good_model {Γ} (m : model' Γ) (hrt : manc m.1 = []): 
+theorem good_model (m : model) (hrt : manc m.1 = []): 
 Π (s : {x : rmodel // x.1 = m.1 ∨ desc x.1 m.1}) (φ : nnf), 
-  φ ∈ htk s.1.1 → force (frame' m) s φ
+  φ ∈ htk s.1.1 → force (frame m) s φ
 | s (var n) h   := begin simp, exact h end
 | s (neg n) h   := begin 
                      simp, intro hin, 
