@@ -704,8 +704,6 @@ open subtype
 
 def model : Type := {m : tmodel // ptmodel m ∧ global_pt m}
 
--- def model' (Γ : sseqt) : Type := {m : tmodel // ptmodel m ∧ global_pt m ∧ (minfo m).Γ = Γ}
-
 def rmodel : Type := {m : tmodel // ptmodel m}
 
 theorem global_property {m : model} {s : tmodel} (h : desc s m.1) : ptmodel s := m.2.2 s h
@@ -805,12 +803,6 @@ theorem trans_reach : Π s₁ s₂ s₃, reach s₁ s₂ → reach s₂ s₃ →
  rel := λ s₁ s₂, reach s₁ s₂, 
  refl := λ s, refl_reach s, 
  trans := λ a b c, trans_reach a b c}
-
--- @[simp] def frame' {Γ} (m : model' Γ) : S4 {x : rmodel // x.1 = m.1 ∨ desc x.1 m.1} := 
--- {val := λ v s, var v ∈ htk s.1.1, 
---  rel := λ s₁ s₂, reach s₁ s₂, 
---  refl := λ s, refl_reach s, 
---  trans := λ a b c, trans_reach a b c}
 
 open rtc
 
@@ -1219,5 +1211,3 @@ end
 
 
 end
-
--- theorem build_model : Π Γ (h : model_constructible Γ), model := _

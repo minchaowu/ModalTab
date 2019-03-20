@@ -109,3 +109,7 @@ def φ : nnf :=
 and (box $ or (neg 1) (var 2)) (and (box $ var 1) (dia $ neg 2))
 
 #eval is_sat [φ]
+
+def ψ : nnf := and (box (var 1)) (dia (dia (neg 1)))
+
+#eval is_sat [ψ]

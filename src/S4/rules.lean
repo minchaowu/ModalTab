@@ -1,10 +1,6 @@
 import .semantics
 open nnf subtype list
 
--- inductive node (Γ : sseqt) : Type
--- | closed : unsatisfiable (Γ.m ++ Γ.b) → node
--- | open_ : Π m : model, (minfo m.val).Γ = Γ → node
-
 inductive node (Γ : sseqt) : Type
 | closed : unsatisfiable (Γ.m ++ Γ.b) → node
 | open_ : {x : model // (minfo x.1).Γ = Γ}  → node
