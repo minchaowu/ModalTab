@@ -21,7 +21,6 @@ end prod
 
 instance : has_well_founded sseqt := 
 ⟨prod.measure_lex' sseqt_size, prod.measure_lex_wf' sseqt_size⟩
--- ⟨ prod.measure_lex seqt_size, prod.measure_lex_wf seqt_size ⟩
 
 lemma size_erase_add_eq_size_sum {φ} : Π (Γ : list nnf) (h : φ ∈ Γ), node_size (Γ.erase φ) + sizeof φ = node_size Γ
 | [] h := absurd h $ not_mem_nil _

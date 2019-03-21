@@ -783,14 +783,9 @@ exact h₂,
 apply rtc.step, exact h₁_a_1, apply h₁_ih, exact h₂
 end
 
-theorem rtc_step {α : Type} {r : α → α → Prop} {a b : α} : 
-r a b → rtc r a b :=
-begin
-intros h,
-apply rtc.step,
-exact h,
-apply rtc.refl
-end
+theorem rtc_step {α : Type} {r : α → α → Prop} {a b : α} (h : r a b) : 
+rtc r a b :=
+by apply rtc.step _ _ _ h; apply rtc.refl
 
 def reach (s₁ s₂ : rmodel) := rtc reach_step s₁ s₂
 
