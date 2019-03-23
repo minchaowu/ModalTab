@@ -1144,18 +1144,10 @@ end
 /- S4-specific lemmas -/
 
 theorem force_of_force_box (h : force k s $ box φ) : force k s φ 
-:= begin dsimp at h, apply h, apply k.refl end
+:= by apply h; apply k.refl
 
 theorem force_box_box_of_force_box : force k s (box φ) → force k s (box (box φ)) :=
-begin
-intros h,
-simp at h,
-simp,
-intros s₁ rs₁ s₂ rs₂,
-apply h,
-apply k.trans,
-exact rs₁, exact rs₂
-end
+by intros h s₁ rs₁ s₂ rs₂; apply h; apply k.trans rs₁ rs₂
 
 theorem unsat_of_unsat_box_new
         (h₁ : box φ ∈ Δ) 
