@@ -81,6 +81,6 @@ match tableau Γ with
 | open_ _  := tt
 end
 
-def test : seqt := ⟨[box (var 1), (neg 1)], [], begin intros, exfalso, apply list.not_mem_nil, exact a_1 end, box_only_nil⟩
+def test : seqt := ⟨[box (var 1), (neg 1)], [], begin intros v l φ h hb hall, exfalso, apply list.not_mem_nil, exact hb end, box_only_nil⟩
 
 #eval is_sat test

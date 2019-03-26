@@ -91,13 +91,16 @@ begin
   rw ←this, assumption
 end
 
+def srefl (m h : list nnf) := 
+∀ {v l φ}, sat builder (cons v l) m → 
+box φ ∈ h → 
+(∀ ψ, box ψ ∈ h → ∀ m ∈ l, force builder m ψ) → 
+force builder (cons v l) φ
+
 structure seqt : Type :=
 (main : list nnf)
 (hdld : list nnf) -- handled boxes
-(pmain : ∀ {v l φ}, sat builder (cons v l) main → 
-         box φ ∈ hdld → 
-         (∀ ψ, box ψ ∈ hdld → ∀ m ∈ l, force builder m ψ) → 
-         force builder (cons v l) φ) --TODO : make KT_model arbitrary
+(pmain : srefl main hdld)
 (phdld : box_only hdld)
 
 class val_constructible (Γ : seqt) :=
