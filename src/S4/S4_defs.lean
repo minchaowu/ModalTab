@@ -706,42 +706,11 @@ def model : Type := {m : tmodel // ptmodel m ∧ global_pt m}
 
 def rmodel : Type := {m : tmodel // ptmodel m}
 
-theorem global_property {m : model} {s : tmodel} (h : desc s m.1) : ptmodel s := m.2.2 s h
-
 inductive reach_step : rmodel → rmodel → Prop
 | fwd_base (s : rmodel) (i l ba h) : s.1 ∈ l → reach_step ⟨(cons i l ba), h⟩  s
 | bwd_base (s : rmodel) (i l ba h) : (∃ rq ∈ ba, some rq = msig s.1) → reach_step ⟨(cons i l ba), h⟩ s
 
-theorem reach_step_box (s₁ s₂ φ) (h₁ : reach_step s₁ s₂) (h₂ : box φ ∈ htk s₁.1) : φ ∈ htk s₂.1 :=
-begin
-cases h₁,
-{cases s₂ with s₂ ps₂,
- cases s₂ with i₂ l₂ sg₂,
- simp,
- have := h₁_h.sbox,
- simp at this, simp at h₂,
- have hmem := this _ h₁_a _ h₂,
- simp at hmem, apply i₂.hhtk.hbox, exact hmem },
-{cases s₂ with s₂ ps₂,
- cases s₂ with i₂ l₂ sg₂,
- simp, apply i₂.hhtk.hbox,
- rcases h₁_a with ⟨w,hmem,hw⟩,
- simp at hw,
- apply i₂.mhtk,
- have := i₂.Γ.ps₂,
- rw ←hw at this,
- have hneq : some w ≠ none, 
-   {intro heq, contradiction},
- have hsub := this hneq,
- apply hsub,
- have := h₁_h.reqb,
- simp at this, simp at h₂,
- have hc := this w hmem φ (or.inl h₂),
- cases w, 
- dsimp [bsig], exact hc}
-end
-
-theorem reach_step_box' (s₁ s₂ φ) (h₁ : reach_step s₁ s₂) (h₂ : box φ ∈ htk s₁.1) : box φ ∈ htk s₂.1 :=
+theorem reach_step_box (s₁ s₂ φ) (h₁ : reach_step s₁ s₂) (h₂ : box φ ∈ htk s₁.1) : box φ ∈ htk s₂.1 :=
 begin
 cases h₁,
 {cases s₂ with s₂ ps₂,
@@ -809,7 +778,7 @@ simp,
 apply i.hhtk.hbox,
 simp at h₂, exact h₂},
 {apply ih, 
- apply reach_step_box',
+ apply reach_step_box,
  exact h₁₂, exact h₂}
 end
 
