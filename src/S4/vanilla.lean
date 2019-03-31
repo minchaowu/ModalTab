@@ -180,7 +180,7 @@ begin
 split, swap,
 exact {x : rmodel // x.1 = m.1 ∨ desc x.1 m.1},
 split, swap,
-exact frame m,
+exact builder m.1,
 split, swap,
 split,
 left, swap, exact ⟨m.1, m.2.1⟩,
