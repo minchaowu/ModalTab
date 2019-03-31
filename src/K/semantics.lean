@@ -48,7 +48,7 @@ class model_constructible (Γ : list nnf) extends val_constructible Γ :=
 def unmodal (Γ : list nnf) : list $ list nnf := 
 list.map (λ d, d :: (unbox Γ)) (undia Γ)
 
-def unmodal_size (Γ : list nnf) : ∀ (i : list nnf),  i ∈ unmodal Γ → (node_size i < node_size Γ) := 
+theorem unmodal_size (Γ : list nnf) : ∀ (i : list nnf),  i ∈ unmodal Γ → (node_size i < node_size Γ) := 
 list.mapp _ _ begin intros φ h, dsimp, apply undia_size h end
 
 def unmodal_mem_box (Γ : list nnf) : ∀ (i : list nnf),  i ∈ unmodal Γ → (∀ φ, box φ ∈ Γ → φ ∈ i) := 
@@ -284,20 +284,19 @@ by cases i; {apply unsat_or_of_unsat_split, repeat {assumption} }
 /- Tree models -/
 
 inductive model
-| leaf : list ℕ → model
 | cons : list ℕ → list model → model
 
 instance : decidable_eq model := by tactic.mk_dec_eq_instance
 
+instance inhabited_model : inhabited model := ⟨model.cons [] []⟩
+
 open model
 
 @[simp] def mval : ℕ → model → bool
-| p (leaf v) := if p ∈ v then tt else ff
-| p (cons v r) := if p ∈ v then tt else ff
+| p (cons v r) := p ∈ v
 
 @[simp] def mrel : model → model → bool
-| (leaf v) m := ff
-| (cons v r) m := if m ∈ r then tt else ff 
+| (cons v r) m := m ∈ r 
 
 theorem mem_of_mrel_tt : Π {v r m}, mrel (cons v r) m = tt → m ∈ r :=
 begin
@@ -348,7 +347,7 @@ begin
   intros l Γ h hbs,
   intros φ hφ,
   cases hfml : φ,
-  case nnf.var : n {dsimp, rw hfml at hφ, simp, apply if_pos, rw ←h.hv, exact hφ},
+  case nnf.var : n {dsimp, rw hfml at hφ, simp, rw ←h.hv, exact hφ},
   case nnf.box : ψ 
   {dsimp, intros s' hs', have hmem := mem_of_mrel_tt hs', 
    have := bs_ex l (unmodal Γ) hbs s' hmem,
@@ -372,13 +371,13 @@ begin
 end
 
 theorem build_model : Π Γ (h : model_constructible Γ), 
-sat builder (leaf h.v) Γ := 
+sat builder (cons h.v []) Γ := 
 begin
   intros, intro, intro hmem,
   cases heq : φ,
   case nnf.var : n {dsimp, have := h.hv, rw heq at hmem, rw this at hmem, simp [hmem]},
   case nnf.neg : n {dsimp, have h₁ := h.hv, rw heq at hmem, have := h.no_contra, simp, rw ←h₁, intro hvar, apply this, swap, exact hmem, exact hvar},
-  case nnf.box : φ {dsimp, intros, contradiction},
+  case nnf.box : φ {dsimp, intros, simp at a, contradiction},
   case nnf.and : φ ψ { rw heq at hmem, have := h.no_and, have := @this φ ψ, contradiction},
   case nnf.or : φ ψ { rw heq at hmem, have := h.no_or, have := @this φ ψ, contradiction},
   case nnf.dia : φ { rw heq at hmem, have := h.no_dia, have := @this φ, contradiction},

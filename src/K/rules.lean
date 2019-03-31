@@ -81,7 +81,7 @@ end
 def tmap {p : list nnf → Prop} (f : Π Γ, p Γ → node Γ): Π Γ : list $ list nnf, (∀ i∈Γ, p i) → 
 psum 
 ({ c : list nnf × list nnf // c.1 ∈ Γ ∧ unsatisfiable c.1 ∧ pmark c.1 c.2}) 
-{x : list model // batch_sat x Γ}
+{x // batch_sat x Γ}
 | [] h := psum.inr ⟨[], bs_nil⟩
 | (hd :: tl) h := 
 match f hd (h hd (by simp)) with

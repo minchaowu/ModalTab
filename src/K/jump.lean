@@ -8,7 +8,6 @@ def tableau : Π Γ : list nnf, node Γ
 match get_contra Γ with
 | inl w          := contra_rule w.2
 | inr no_contra  := 
-
   match get_and Γ with
   | inl p := 
   let Δ := p.1.1 :: p.1.2 :: Γ.erase (nnf.and p.val.1 p.val.2) in 
@@ -17,7 +16,6 @@ match get_contra Γ with
     by apply split_lt_and; exact p.2,
   let d_delta : node Δ := tableau Δ in and_rule inst d_delta
   | inr no_and := 
-
     match get_or Γ with
     | inl p := 
     let Γ₁ := p.1.1 :: Γ.erase (nnf.or p.val.1 p.val.2) in 
@@ -35,7 +33,6 @@ match get_contra Γ with
     | open_ w := open_rule inst w.2
     end
     | inr no_or := 
-
       match get_dia Γ with
       | inl p := 
       let ma : modal_applicable Γ := 
@@ -71,13 +68,9 @@ match get_contra Γ with
            hv := λ n, get_var_iff,
            no_dia := no_dia} in 
       by right; split; apply build_model; exact mc
-
       end
-
     end
-
   end
-
 end
 using_well_founded {rel_tac := λ _ _, `[exact ⟨_, measure_wf node_size⟩]}
 

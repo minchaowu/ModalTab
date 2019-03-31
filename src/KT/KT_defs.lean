@@ -55,10 +55,10 @@ instance : decidable_eq model := by tactic.mk_dec_eq_instance
 open model
 
 @[simp] def mval : ℕ → model → bool
-| p (cons v r) := if p ∈ v then tt else ff
+| p (cons v r) := p ∈ v
 
 @[simp] def mrel : model → model → bool
-| m₁@(cons v r) m₂ := if m₂ ∈ r ∨ m₁ = m₂ then tt else ff 
+| m₁@(cons v r) m₂ := m₂ ∈ r ∨ m₁ = m₂
 
 theorem refl_mrel (s : model) : mrel s s := by cases s with v r; simp
 
@@ -346,8 +346,8 @@ def and_child {φ ψ} (Γ : seqt) (h : nnf.and φ ψ ∈ Γ.main) : seqt :=
 begin 
   intros k s γ hsat hin hall, 
   by_cases heq : γ = and φ ψ,
-  {rw heq, dsimp, split, apply hsat, simp, apply hsat, simp},
-  {apply Γ.pmain, apply sat_and_of_sat_split, exact h, exact hsat, exact hin, exact hall}
+  {rw heq, split, apply hsat, simp, apply hsat, simp},
+  {apply Γ.pmain _ hin hall, apply sat_and_of_sat_split _ _ _ _ _ h hsat}
 end, 
 Γ.phdld⟩
 

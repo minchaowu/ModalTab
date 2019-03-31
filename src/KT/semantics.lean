@@ -125,7 +125,7 @@ begin
   intros φ hφ,
   cases hfml : φ,
   case nnf.var : n 
-  {rw hfml at hφ, simp, apply if_pos, rw ←h.hv, 
+  {rw hfml at hφ, simp, rw ←h.hv, 
    exact hφ },
   case nnf.box : ψ 
   {exfalso, rw hfml at hφ, apply h.no_box_main, exact hφ},

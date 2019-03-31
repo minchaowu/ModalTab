@@ -64,8 +64,8 @@ instance nnf_repr : has_repr nnf := ⟨nnf.to_string⟩
 instance dec_eq_nnf : decidable_eq nnf := by mk_dec_eq_instance
 
 structure kripke (states : Type) :=
-(val       : ℕ → states → Prop)
-(rel       : states → states → Prop)
+(val : ℕ → states → Prop)
+(rel : states → states → Prop)
 
 instance inhabited_kripke : inhabited (kripke ℕ) := 
 ⟨{ val := λ a b, tt, rel := λ a b, tt }⟩

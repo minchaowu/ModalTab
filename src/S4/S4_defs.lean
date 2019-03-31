@@ -762,7 +762,7 @@ theorem refl_reach : Π s, reach s s := λ s, rtc.refl _ _
 
 theorem trans_reach : Π s₁ s₂ s₃, reach s₁ s₂ → reach s₂ s₃ → reach s₁ s₃ := λ s₁ s₂ s₃ h₁ h₂, rtc.trans h₁ h₂
 
-@[simp] def frame (m : model) : S4 {x : rmodel // x.1 = m.1 ∨ desc x.1 m.1} := 
+@[simp] def frame (m : tmodel) : S4 {x : rmodel // x.1 = m ∨ desc x.1 m} := 
 {val := λ v s, var v ∈ htk s.1.1, 
  rel := λ s₁ s₂, reach s₁ s₂, 
  refl := λ s, refl_reach s, 
@@ -888,7 +888,7 @@ end
 
 theorem good_model (m : model) (hrt : manc m.1 = []): 
 Π (s : {x : rmodel // x.1 = m.1 ∨ desc x.1 m.1}) (φ : nnf), 
-  φ ∈ htk s.1.1 → force (frame m) s φ
+  φ ∈ htk s.1.1 → force (frame m.1) s φ
 | s (var n) h   := begin simp, exact h end
 | s (neg n) h   := begin 
                      simp, intro hin, 
