@@ -3,7 +3,7 @@ open nnf subtype list
 
 inductive node (Γ : sseqt) : Type
 | closed : unsatisfiable (Γ.m ++ Γ.b) → node
-| open_ : {x : model // (minfo x.1).Γ = Γ}  → node
+| open_ : {x : model // (minfo x.1).id = Γ}  → node
 
 open node
 
@@ -63,7 +63,7 @@ have hhtk : hintikka rhtk,
 have mhtk : Γ.m ⊆ rhtk,
   {intros x hx, by_cases heq : x = and φ ψ, 
    {rw heq, simp}, 
-   {have : x ∈ iw.Γ.m, 
+   {have : x ∈ iw.id.m, 
      {simp at pw, rw pw, dsimp, right, right, 
       have := (mem_erase_of_ne heq).2 hx, exact this},
     right, apply iw.mhtk this }},
@@ -85,40 +85,40 @@ have ptm : ptmodel tm,
    {simp, have := pwa.1.sreq, simp at pw, simp at this, rw pw at this, simp at this, exact this}},
 have gpt : global_pt tm, 
   {intros s hs, have := pwa.2 s, rw eq_desc_of_eq_children at this, apply this, exact hs},
-have hinfo : (minfo tm).Γ = Γ, {simp},
+have hinfo : (minfo tm).id = Γ, {simp},
 exact ⟨⟨tm, ⟨ptm, gpt⟩⟩, hinfo⟩
 end
 
 inductive batch_eq : list model → list sseqt → Prop
 | bs_nil : batch_eq [] []
-| bs_cons (m:model) (Γ:sseqt) (l₁ l₂) : (minfo m.1).Γ = Γ → 
+| bs_cons (m:model) (Γ:sseqt) (l₁ l₂) : (minfo m.1).id = Γ → 
                                         batch_eq l₁ l₂ → 
                                         batch_eq (m::l₁) (Γ::l₂)
 
 open batch_eq
 
 theorem be_ex : Π l Γ, 
-batch_eq l Γ → ∀ (m : model), m ∈ l → ∃ i ∈ Γ, (minfo m.1).Γ = i
+batch_eq l Γ → ∀ (m : model), m ∈ l → ∃ i ∈ Γ, (minfo m.1).id = i
 | l Γ bs_nil := λ m hm, by simpa using hm
 | l Γ (bs_cons m Δ l₁ l₂ h hbs) := 
 begin
   intros n hn, 
   cases hn,
   {split, swap, exact Δ, split, simp, rw hn, exact h},
-  {have : ∃ (i : sseqt) (H : i ∈ l₂), (minfo (n.val)).Γ = i,
+  {have : ∃ (i : sseqt) (H : i ∈ l₂), (minfo (n.val)).id = i,
      {apply be_ex, exact hbs, exact hn},
    rcases this with ⟨w, hw, hsat⟩, split, swap, exact w, split, 
    {simp [hw]}, {exact hsat}}
 end
 
 theorem be_forall : Π l Γ, 
-batch_eq l Γ → ∀ i ∈ Γ, ∃ (m : model) (h : m ∈ l), (minfo m.1).Γ = i
+batch_eq l Γ → ∀ i ∈ Γ, ∃ (m : model) (h : m ∈ l), (minfo m.1).id = i
 | l Γ bs_nil := λ m hm, by simpa using hm
 | l Γ (bs_cons m Δ l₁ l₂ h hbs) := 
 begin
   intros i hi,
   cases hi, {split, swap, exact m, split, simp, rw hi, exact h},
-  {have : ∃ (n : model) (H : n ∈ l₁), (minfo (n.val)).Γ = i,
+  {have : ∃ (n : model) (H : n ∈ l₁), (minfo (n.val)).id = i,
      {apply be_forall, exact hbs, exact hi},
    rcases this with ⟨w, hw, hsat⟩, split, swap, exact w, split, 
    {simp [hw]}, {exact hsat} }
@@ -298,7 +298,7 @@ have hhtk : hintikka rhtk,
 have mhtk : Γ.m ⊆ rhtk,
   {intros x hx, by_cases heq : x = box φ, 
    {rw heq, simp}, 
-   {have : x ∈ iw.Γ.m, 
+   {have : x ∈ iw.id.m, 
      {simp at pw, rw pw, dsimp, right, 
       have := (mem_erase_of_ne heq).2 hx, exact this},
     right, apply iw.mhtk this }},
@@ -328,7 +328,7 @@ have ptm : ptmodel tm,
    {simp, have := pwa.1.sreq, simp at pw, simp at this, rw pw at this, simp at this, exact this}},
 have gpt : global_pt tm, 
   {intros s hs, have := pwa.2 s, rw eq_desc_of_eq_children at this, apply this, exact hs},
-have hinfo : (minfo tm).Γ = Γ, {simp},
+have hinfo : (minfo tm).id = Γ, {simp},
 exact ⟨⟨tm, ⟨ptm, gpt⟩⟩, hinfo⟩
 end
 
@@ -373,7 +373,7 @@ have hhtk : hintikka rhtk,
 have mhtk : Γ.m ⊆ rhtk,
   {intros x hx, by_cases heq : x = box φ, 
    {rw heq, simp}, 
-   {have : x ∈ iw.Γ.m, 
+   {have : x ∈ iw.id.m, 
      {simp at pw, rw pw, dsimp, right, 
       have := (mem_erase_of_ne heq).2 hx, exact this},
     right, apply iw.mhtk this }},
@@ -403,7 +403,7 @@ have ptm : ptmodel tm,
    {simp, have := pwa.1.sreq, simp at pw, simp at this, rw pw at this, simp at this, exact this}},
 have gpt : global_pt tm, 
   {intros s hs, have := pwa.2 s, rw eq_desc_of_eq_children at this, apply this, exact hs},
-have hinfo : (minfo tm).Γ = Γ, {simp},
+have hinfo : (minfo tm).id = Γ, {simp},
 exact ⟨⟨tm, ⟨ptm, gpt⟩⟩, hinfo⟩
 end
 
@@ -466,7 +466,7 @@ have hhtk : hintikka rhtk,
 have mhtk : Δ.m ⊆ rhtk,
   {intros x hx, by_cases heq : x = or φ ψ, 
    {rw heq, simp}, 
-   {have : x ∈ iw.Γ.m, 
+   {have : x ∈ iw.id.m, 
      {simp at pw, rw pw, dsimp, right, 
       have := (mem_erase_of_ne heq).2 hx, exact this},
     right, apply iw.mhtk this }},
@@ -488,7 +488,7 @@ have ptm : ptmodel tm,
    {simp, have := pwa.1.sreq, simp at pw, simp at this, rw pw at this, simp at this, exact this}},
 have gpt : global_pt tm, 
   {intros s hs, have := pwa.2 s, rw eq_desc_of_eq_children at this, apply this, exact hs},
-have hinfo : (minfo tm).Γ = Δ, {simp},
+have hinfo : (minfo tm).id = Δ, {simp},
 exact ⟨⟨tm, ⟨ptm, gpt⟩⟩, hinfo⟩
 end
 | _ (open_ w) := 
@@ -525,7 +525,7 @@ have hhtk : hintikka rhtk,
 have mhtk : Δ.m ⊆ rhtk,
   {intros x hx, by_cases heq : x = or φ ψ, 
    {rw heq, simp}, 
-   {have : x ∈ iw.Γ.m, 
+   {have : x ∈ iw.id.m, 
      {simp at pw, rw pw, dsimp, right, 
       have := (mem_erase_of_ne heq).2 hx, exact this},
     right, apply iw.mhtk this }},
@@ -547,7 +547,7 @@ have ptm : ptmodel tm,
    {simp, have := pwa.1.sreq, simp at pw, simp at this, rw pw at this, simp at this, exact this}},
 have gpt : global_pt tm, 
   {intros s hs, have := pwa.2 s, rw eq_desc_of_eq_children at this, apply this, exact hs},
-have hinfo : (minfo tm).Γ = Δ, {simp},
+have hinfo : (minfo tm).id = Δ, {simp},
 exact ⟨⟨tm, ⟨ptm, gpt⟩⟩, hinfo⟩
 end
 | (closed h₁) (closed h₂):= begin 

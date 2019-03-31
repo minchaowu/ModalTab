@@ -551,10 +551,10 @@ theorem hintikka_mc {Γ} (h : model_constructible Γ) : hintikka Γ.m :=
 hintikka_vc h.to_val_constructible
 
 structure info : Type :=
-(Γ : sseqt)
+(id : sseqt)
 (htk : list nnf)
 (hhtk : hintikka htk)
-(mhtk : Γ.m ⊆ htk)
+(mhtk : id.m ⊆ htk)
 
 instance : decidable_eq info := by tactic.mk_dec_eq_instance
 
@@ -572,28 +572,28 @@ open tmodel
 | (cons i l ba) := i.htk
 
 def hist : Π m : tmodel, list nnf
-| (cons i l ba) := i.Γ.h
+| (cons i l ba) := i.id.h
 
 @[simp] def msig : Π m : tmodel, sig
-| (cons i l ba) := i.Γ.s
+| (cons i l ba) := i.id.s
 
 @[simp] def manc : Π m : tmodel, list psig
-| (cons i l ba) := i.Γ.a
+| (cons i l ba) := i.id.a
 
 def bhist : Π m : tmodel, list nnf
-| (cons i l ba) := i.Γ.b
+| (cons i l ba) := i.id.b
 
 @[simp] def request : Π m : tmodel, list psig
 | (cons i l ba) := ba
 
 @[simp] def proper_request_box : Π m : tmodel, Prop
-| (cons i l ba) := ∀ rq : psig, rq ∈ ba → ∀ φ, (box φ ∈ i.htk ∨ box φ ∈ i.Γ.b) → box φ ∈ rq.b
+| (cons i l ba) := ∀ rq : psig, rq ∈ ba → ∀ φ, (box φ ∈ i.htk ∨ box φ ∈ i.id.b) → box φ ∈ rq.b
 
 @[simp] def subset_request : Π m : tmodel, Prop
-| (cons i l ba) := ba ⊆ i.Γ.a
+| (cons i l ba) := ba ⊆ i.id.a
 
 @[simp] def tmodel_step_bhist : Π m : tmodel, Prop 
-| m@(cons i l ba) := ∀ s ∈ l, ∀ φ, box φ ∈ i.Γ.b → box φ ∈ htk s
+| m@(cons i l ba) := ∀ s ∈ l, ∀ φ, box φ ∈ i.id.b → box φ ∈ htk s
 
 @[simp] def tmodel_step_box : Π m : tmodel, Prop 
 | m@(cons i l ba) := ∀ s ∈ l, ∀ φ, box φ ∈ i.htk → box φ ∈ htk s
@@ -726,7 +726,7 @@ cases h₁,
  rcases h₁_a with ⟨w,hmem,hw⟩,
  simp at hw,
  apply i₂.mhtk,
- have := i₂.Γ.ps₂,
+ have := i₂.id.ps₂,
  rw ←hw at this,
  have hneq : some w ≠ none, 
    {intro heq, contradiction},
@@ -813,7 +813,7 @@ cases hc,
   split,
   {cases m with im lm sgm, simp,
    apply im.mhtk, 
-   have := im.Γ.ps₁,
+   have := im.id.ps₁,
    simp at hmr, rw ←hmr at this,
    have hneq : some w ≠ none, {intro, contradiction},
    have hmem := this hneq, 
