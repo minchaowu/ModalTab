@@ -1,7 +1,6 @@
 import .ops
 open subtype nnf
 
-/- This has a better computaional behaviour than a forcing relation defined explicitly as an inductive predicate. -/
 @[simp] def force {states : Type} (k : kripke states) : states → nnf → Prop
 | s (var n)    := k.val n s
 | s (neg n)    := ¬ k.val n s
@@ -16,11 +15,10 @@ def sat {st} (k : kripke st) (s) (Γ : list nnf) : Prop :=
 def unsatisfiable (Γ : list nnf) : Prop := 
 ∀ (st) (k : kripke st) s, ¬ sat k s Γ
 
-theorem unsat_singleton {φ} : unsatisfiable [φ] → ∀ (st) (k : kripke st) s, ¬ force k s φ
+theorem unsat_singleton {φ} (h : unsatisfiable [φ]) : ∀ {st} (k : kripke st) s, ¬ force k s φ
  := 
 begin
-  intro h, intros, intro hf, 
-  apply h, intros ψ hψ, rw list.mem_singleton at hψ, rw hψ, exact hf
+  intros st k s hf, apply h, intros ψ hψ, rw list.mem_singleton at hψ, rw hψ, exact hf
 end
 
 theorem sat_of_empty {st} (k : kripke st) (s) : sat k s [] :=
@@ -29,14 +27,14 @@ theorem sat_of_empty {st} (k : kripke st) (s) : sat k s [] :=
 theorem ne_empty_of_unsat {Γ} (h : unsatisfiable Γ): Γ ≠ [] := 
 begin 
   intro heq, rw heq at h, 
-  apply h, apply sat_of_empty, exact nat, 
+  apply h, apply @sat_of_empty nat, 
   apply inhabited_kripke.1, exact 0 
 end
 
 class val_constructible (Γ : list nnf) extends saturated Γ:=
 (no_contra : ∀ {n}, var n ∈ Γ → neg n ∉ Γ)
 (v : list ℕ)
-(hv : ∀ n, var n ∈ Γ ↔ n ∈ v)
+(hv : ∀ {n}, var n ∈ Γ ↔ n ∈ v)
 
 class modal_applicable (Γ : list nnf) extends val_constructible Γ :=
 (φ : nnf)
@@ -49,7 +47,7 @@ def unmodal (Γ : list nnf) : list $ list nnf :=
 list.map (λ d, d :: (unbox Γ)) (undia Γ)
 
 theorem unmodal_size (Γ : list nnf) : ∀ (i : list nnf),  i ∈ unmodal Γ → (node_size i < node_size Γ) := 
-list.mapp _ _ begin intros φ h, dsimp, apply undia_size h end
+list.mapp _ _ begin intros φ h, apply undia_size h end
 
 def unmodal_mem_box (Γ : list nnf) : ∀ (i : list nnf),  i ∈ unmodal Γ → (∀ φ, box φ ∈ Γ → φ ∈ i) := 
 list.mapp _ _ begin intros φ h ψ hψ, right, apply (@unbox_iff Γ ψ).1 hψ end
@@ -65,33 +63,31 @@ begin
   have : force k s (dia φ), 
     { apply h, apply h₂, rw undia_iff, exact hmem }, 
   rcases this with ⟨w, hrel, hforce⟩,
-  split, swap, {exact w}, 
+  split, swap, { exact w }, 
   { intro ψ, intro hψ, cases hψ, 
-    {rw hψ, exact hforce}, 
-    {have := h₁ _ ((@unbox_iff Γ ψ).2 hψ), 
-     have := h _ this,
-     apply this _ hrel} },
+    { rw hψ, exact hforce }, 
+    { apply (h _ (h₁ _ ((@unbox_iff Γ ψ).2 hψ))) _ hrel} },
 end
 
 def unmodal_mem_head (Γ : list nnf) : ∀ (i : list nnf),  i ∈ unmodal Γ → dia (list.head i) ∈ Γ :=
-list.mapp _ _ begin intros φ hmem, dsimp, rw undia_iff, exact hmem end
+list.mapp _ _ begin intros φ hmem, rw undia_iff, exact hmem end
 
 def unmodal_unsat_of_unsat (Γ : list nnf) : ∀ (i : list nnf),  i ∈ unmodal Γ → Π h : unsatisfiable i, unsatisfiable (dia (list.head i) :: rebox (unbox Γ)) :=
 list.mapp _ _ 
 begin 
-intros φ _,
-{ intro h, intro, intros k s hsat, dsimp at hsat,
-  have ex := hsat (dia φ) (by simp),
-  cases ex with s' hs',
-  apply h st k s', intros ψ hmem,
-  cases hmem, 
-  {rw hmem, exact hs'.2}, 
-  {have := (@rebox_iff ψ (unbox Γ)).2 hmem, 
-   apply hsat (box ψ) (by right; assumption) s' hs'.1 } }
+  intros φ _,
+  { intro h, intro, intros k s hsat,
+    have ex := hsat (dia φ) (by simp),
+    cases ex with s' hs',
+    apply h st k s', intros ψ hmem,
+    cases hmem, 
+    { rw hmem, exact hs'.2 }, 
+    { have := (@rebox_iff ψ (unbox Γ)).2 hmem, 
+      apply hsat (box ψ) (by right; assumption) s' hs'.1 } }
 end
 
 def mem_unmodal (Γ : list nnf) (φ) (h : φ ∈ undia Γ) : (φ :: unbox Γ) ∈ unmodal Γ := 
-begin dsimp [unmodal], apply list.mem_map_of_mem (λ φ, φ :: unbox Γ) h end
+begin apply list.mem_map_of_mem (λ φ, φ :: unbox Γ) h end
 
 def unsat_of_unsat_unmodal {Γ : list nnf} (h : modal_applicable Γ) (i) : i ∈ unmodal Γ ∧ unsatisfiable i → unsatisfiable Γ := 
 begin
@@ -199,7 +195,7 @@ theorem sat_and_of_sat_split
 begin
   intro e, intro he,
   by_cases (e = and φ ψ),
-  { rw h, dsimp, split, repeat {apply h₂, simp} },
+  { rw h, split, repeat {apply h₂, simp} },
   { have : e ∈ Δ.erase (and φ ψ),
       { rw mem_erase_of_ne, repeat { assumption } },
     apply h₂, simp [this] }
@@ -213,7 +209,6 @@ theorem unsat_or_of_unsat_split
 begin
   intro, intros, intro hsat,
   have := hsat _ h,
-  dsimp at this,
   cases this,
   {apply h₁, swap 3, exact k, swap, exact s, intro e, intro he, 
    cases he, rw he, exact this, apply hsat, apply mem_of_mem_erase he},
@@ -228,7 +223,7 @@ theorem sat_or_of_sat_split_left
 begin
   intros e he,
   by_cases (e = or φ ψ),
-  { rw h, dsimp, left, apply hl, simp},
+  { rw h, left, apply hl, simp},
   {have : e ∈ Δ.erase (or φ ψ),
      { rw mem_erase_of_ne, repeat { assumption } },
    apply hl, simp [this]}
@@ -241,7 +236,7 @@ theorem sat_or_of_sat_split_right
 begin
   intros e he,
   by_cases (e = or φ ψ),
-  { rw h, dsimp, right, apply hl, simp},
+  { rw h, right, apply hl, simp},
   { have : e ∈ Δ.erase (or φ ψ),
       { rw mem_erase_of_ne, repeat { assumption } },
     apply hl, simp [this] }
@@ -344,12 +339,11 @@ end
 theorem sat_of_batch_sat : Π l Γ (h : modal_applicable Γ), 
 batch_sat l (unmodal Γ) → sat builder (cons h.v l) Γ := 
 begin
-  intros l Γ h hbs,
-  intros φ hφ,
+  intros l Γ h hbs φ hφ,
   cases hfml : φ,
-  case nnf.var : n {dsimp, rw hfml at hφ, simp, rw ←h.hv, exact hφ},
+  case nnf.var : n {rw hfml at hφ, simp, rw ←h.hv, exact hφ},
   case nnf.box : ψ 
-  {dsimp, intros s' hs', have hmem := mem_of_mrel_tt hs', 
+  {intros s' hs', have hmem := mem_of_mrel_tt hs', 
    have := bs_ex l (unmodal Γ) hbs s' hmem,
    rcases this with ⟨w, hw, hsat⟩,
    have := unmodal_mem_box Γ w hw ψ _,
@@ -357,11 +351,11 @@ begin
   case nnf.dia : ψ 
   {dsimp, 
    have := bs_forall l (unmodal Γ) hbs (ψ :: unbox Γ) _, swap,
-   {apply mem_unmodal, rw ←undia_iff, rw ←hfml, exact hφ}, 
+   {apply mem_unmodal, rw [←undia_iff, ←hfml], exact hφ}, 
    {rcases this with ⟨w, hw, hsat⟩, split, swap, exact w, split, 
     {simp [hw]}, {apply hsat, simp} } },
   case nnf.neg : n
-  {dsimp, rw hfml at hφ, have : var n ∉ Γ, 
+  {rw hfml at hφ, have : var n ∉ Γ, 
    {intro hin, have := h.no_contra, have := this hin, contradiction},
     simp, rw ←h.hv, exact this },
   case nnf.and : φ ψ
@@ -375,10 +369,10 @@ sat builder (cons h.v []) Γ :=
 begin
   intros, intro, intro hmem,
   cases heq : φ,
-  case nnf.var : n {dsimp, have := h.hv, rw heq at hmem, rw this at hmem, simp [hmem]},
-  case nnf.neg : n {dsimp, have h₁ := h.hv, rw heq at hmem, have := h.no_contra, simp, rw ←h₁, intro hvar, apply this, swap, exact hmem, exact hvar},
-  case nnf.box : φ {dsimp, intros, simp at a, contradiction},
-  case nnf.and : φ ψ { rw heq at hmem, have := h.no_and, have := @this φ ψ, contradiction},
-  case nnf.or : φ ψ { rw heq at hmem, have := h.no_or, have := @this φ ψ, contradiction},
-  case nnf.dia : φ { rw heq at hmem, have := h.no_dia, have := @this φ, contradiction},
+  case nnf.var : n {rw [heq,h.hv] at hmem, simp [hmem]},
+  case nnf.neg : n {rw heq at hmem, simp, rw ←h.hv, intro hin, exfalso, apply h.no_contra, repeat {assumption} },
+  case nnf.box : φ {simp},
+  case nnf.and : φ ψ { rw heq at hmem, exfalso, apply h.no_and, assumption},
+  case nnf.or : φ ψ { rw heq at hmem, exfalso, apply h.no_or, assumption},
+  case nnf.dia : φ { rw heq at hmem, exfalso, apply h.no_dia, assumption},
 end
