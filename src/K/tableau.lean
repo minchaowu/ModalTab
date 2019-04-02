@@ -24,14 +24,8 @@ begin
   { simp } }
 end
 
-#print axioms classical_correctness
-
 open fml
 
 def fml.exm : fml := or (var 1) (neg (var 1))
 
 def K : fml := impl (box (impl (var 1) (var 2))) (impl (box $ var 1) (box $ var 2))
-
-#eval fml_is_sat [neg fml.exm]
-
-#eval fml_is_sat [neg K]

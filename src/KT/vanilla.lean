@@ -108,7 +108,6 @@ begin
   { simp } }
 end
 
-
 def test  := [box (var 1), (neg 1)]
 
 #eval is_sat test
