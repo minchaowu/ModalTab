@@ -28,8 +28,10 @@ match get_contra_seqt Γ with
     have h₂ : prod.measure_lex seqt_size ⟨Γ₂, Γ.hdld,_,_⟩ Γ, 
     begin apply split_lt_or_seqt_right, exact p.2 end,
     let d_Γ₁ : node ⟨Γ₁, Γ.hdld,_,_⟩ := tableau (or_child_left Γ p.2) in 
-    let d_Γ₂ : node ⟨Γ₂, Γ.hdld,_,_⟩ := tableau (or_child_right Γ p.2) in 
-    or_rule_seqt inst d_Γ₁ d_Γ₂
+    match d_Γ₁ with
+    | closed pr := or_rule_seqt inst (closed pr) (tableau (or_child_right Γ p.2))
+    | open_ w := open_rule_seqt inst w.2
+    end
     | inr no_or := 
       match get_box_seqt Γ with
       | inl p := 
@@ -75,12 +77,38 @@ match get_contra_seqt Γ with
 end
 using_well_founded {rel_tac := λ _ _, `[exact ⟨_, prod.measure_lex_wf seqt_size⟩], dec_tac := `[assumption]}
 
-def is_sat (Γ : seqt) : bool :=
-match tableau Γ with
+@[simp] def mk_seqt (Γ : list nnf) : seqt :=
+{ main := Γ,
+  hdld := [],
+  pmain := begin 
+             intros v l φ h hb hall, exfalso, 
+             apply list.not_mem_nil, exact hb 
+           end,
+  phdld := box_only_nil }
+
+def is_sat (Γ : list nnf) : bool :=
+match tableau (mk_seqt Γ) with
 | closed _ := ff
 | open_ _  := tt
 end
 
-def test : seqt := ⟨[box (var 1), (neg 1)], [], begin intros v l φ h hb hall, exfalso, apply list.not_mem_nil, exact hb end, box_only_nil⟩
+theorem correctness (Γ : list nnf) : is_sat Γ = tt ↔ ∃ (st : Type) (k : KT st) s, sat k s Γ := 
+begin
+  cases h : is_sat Γ,
+  constructor,
+  {intro, contradiction},
+  {intro hsat, cases eq : tableau (mk_seqt Γ), 
+   rcases hsat with ⟨w, k, s, hsat⟩,
+   apply false.elim, apply a, simp, exact hsat,
+   {dsimp [is_sat] at h, dsimp at eq, rw eq at h, contradiction} },
+  {split, intro, dsimp [is_sat] at h, 
+    cases eq : tableau (mk_seqt Γ),
+    { dsimp at eq, rw eq at h, contradiction },
+  { split, split, split, have := a_1.2, simp at this, exact this},
+  { simp } }
+end
+
+
+def test  := [box (var 1), (neg 1)]
 
 #eval is_sat test

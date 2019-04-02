@@ -62,6 +62,19 @@ def or_rule_seqt {Γ₁ Γ₂ Δ} (i : or_instance_seqt Δ Γ₁ Γ₂) :
                               repeat {assumption}
                             end
 
+def open_rule_seqt {Γ₁ Γ₂ Δ} {s:model} (i : or_instance_seqt Δ Γ₁ Γ₂) (h : sat builder s (Γ₁.main++Γ₁.hdld)) : node Δ :=
+begin
+  right,
+  cases i,
+  constructor,
+  apply sat_or_of_sat_split_left,
+  apply subset_append_left,
+  assumption,
+  apply sat_subset, swap, exact h,
+  rw erase_append_left _ i_h,
+  rw ←cons_append, simp
+end
+
 def copy_rule_seqt {Γ Δ : seqt} (i : copy_instance_seqt Γ Δ) : node Δ → node Γ
 | (closed h) := begin 
                   left,

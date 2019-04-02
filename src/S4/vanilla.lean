@@ -1,6 +1,6 @@
 import .rules
 
-open psum nnf
+open psum nnf node
 
 set_option eqn_compiler.zeta true
 
@@ -25,8 +25,10 @@ def tableau : Π Γ : sseqt, node Γ
       have h₂ : prod.measure_lex' sseqt_size (or_child_right Γ w.2) Γ,
       begin apply split_lt_or_seqt_right end,
       let Γ₁ := tableau (or_child_left Γ w.2) in
-      let Γ₂ := tableau (or_child_right Γ w.2) in
-      or_rule_seqt inst Γ₁ Γ₂
+      match Γ₁ with
+      | closed p := or_rule_seqt inst (closed p) (tableau (or_child_right Γ w.2))
+      | open_ w := open_rule_seqt inst w.2
+      end
       | inr no_or := 
         match get_box_seqt Γ with
         | inl w := -- term mode here helps termination 
@@ -165,8 +167,6 @@ using_well_founded {rel_tac := λ _ _, `[exact ⟨_, prod.measure_lex_wf' sseqt_
   hb := box_only_nil,
   ps₁ := λ h, by contradiction,
   ps₂ := λ h, by contradiction }
-
-open node
 
 def is_sat (Γ : list nnf) : bool :=
 match tableau (mk_sseqt Γ) with
