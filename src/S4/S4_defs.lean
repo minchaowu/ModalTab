@@ -15,7 +15,7 @@ structure S4 (states : Type) extends kripke states :=
 (trans : transitive rel . frame_restriction)
 
 instance inhabited_S4 : inhabited (S4 ℕ) := 
-⟨{ val := λ a b, tt, rel := λ a b, tt }⟩
+⟨ { val := λ a b, tt, rel := λ a b, tt } ⟩
 
 @[simp] def force {states : Type} (k : S4 states) : states → nnf → Prop
 | s (var n)    := k.val n s
@@ -243,9 +243,9 @@ theorem mem_closure_self : Π Γ : list nnf, Γ ⊆ closure Γ
 | [] := λ x h, absurd h $ list.not_mem_nil _
 | (hd::tl) := 
 begin 
-intros x hx, cases hx, 
-{rw hx, simp, left, apply mem_sub_nnf_self},
-{simp, right, apply mem_closure_self, exact hx} 
+  intros x hx, cases hx, 
+  {rw hx, simp, left, apply mem_sub_nnf_self},
+  {simp, right, apply mem_closure_self, exact hx} 
 end
 
 theorem mem_closure_and {φ ψ : nnf} : Π Γ : list nnf, and φ ψ ∈ closure Γ → φ ∈ closure Γ ∧ ψ ∈ closure Γ
@@ -359,14 +359,7 @@ def sseqt_size (s : sseqt) : ℕ × ℕ × ℕ :=
 def and_child {φ ψ} (Γ : sseqt) (h : nnf.and φ ψ ∈ Γ.m) : sseqt :=
 { goal := Γ.goal, 
   s := none,
-  a := Γ.a, 
-  h := Γ.h, 
-  b := Γ.b, 
   m := φ :: ψ :: Γ.m.erase (and φ ψ),
-  ndh := Γ.ndh,
-  ndb := Γ.ndb,
-  sph := Γ.sph,
-  spb := Γ.spb,
   sbm := begin 
           intros x hx, cases hx, 
           {rw hx, apply (mem_closure_and _ (Γ.sbm h)).1}, 
@@ -374,10 +367,9 @@ def and_child {φ ψ} (Γ : sseqt) (h : nnf.and φ ψ ∈ Γ.m) : sseqt :=
            {rw hx, apply (mem_closure_and _ (Γ.sbm h)).2},
            {apply Γ.sbm, apply list.erase_subset, exact hx}}
          end,
-  ha := Γ.ha,
-  hb := Γ.hb,
   ps₁ := by intro; contradiction,
-  ps₂ := by intro; contradiction}
+  ps₂ := by intro; contradiction,
+  .. Γ}
 
 inductive and_instance_seqt (Γ : sseqt) : sseqt → Type
 | cons : Π {φ ψ} (h : nnf.and φ ψ ∈ Γ.m), 
@@ -386,44 +378,28 @@ inductive and_instance_seqt (Γ : sseqt) : sseqt → Type
 def or_child_left {φ ψ} (Γ : sseqt) (h : nnf.or φ ψ ∈ Γ.m) : sseqt :=
 { goal := Γ.goal, 
   s := none,
-  a := Γ.a, 
-  h := Γ.h, 
-  b := Γ.b, 
   m := φ :: Γ.m.erase (or φ ψ),
-  ndh := Γ.ndh,
-  ndb := Γ.ndb,
-  sph := Γ.sph,
-  spb := Γ.spb,
   sbm := begin 
           intros x hx, cases hx, 
           {rw hx, apply (mem_closure_or _ (Γ.sbm h)).1}, 
           {apply Γ.sbm, apply list.erase_subset, exact hx}
          end,
-  ha := Γ.ha,
-  hb := Γ.hb,
   ps₁ := by intro; contradiction,
-  ps₂ := by intro; contradiction}
+  ps₂ := by intro; contradiction,
+  .. Γ}
 
 def or_child_right {φ ψ} (Γ : sseqt) (h : nnf.or φ ψ ∈ Γ.m) : sseqt :=
 { goal := Γ.goal, 
   s := none,
-  a := Γ.a, 
-  h := Γ.h, 
-  b := Γ.b, 
   m := ψ :: Γ.m.erase (or φ ψ),
-  ndh := Γ.ndh,
-  ndb := Γ.ndb,
-  sph := Γ.sph,
-  spb := Γ.spb,
   sbm := begin 
-          intros x hx, cases hx, 
-          {rw hx, apply (mem_closure_or _ (Γ.sbm h)).2}, 
-          {apply Γ.sbm, apply list.erase_subset, exact hx}
+           intros x hx, cases hx, 
+           {rw hx, apply (mem_closure_or _ (Γ.sbm h)).2}, 
+           {apply Γ.sbm, apply list.erase_subset, exact hx}
          end,
-  ha := Γ.ha,
-  hb := Γ.hb,
   ps₁ := by intro; contradiction,
-  ps₂ := by intro; contradiction}
+  ps₂ := by intro; contradiction,
+  .. Γ}
 
 inductive or_instance_seqt (Γ : sseqt) : sseqt → sseqt → Type
 | cons : Π {φ ψ} (h : nnf.or φ ψ ∈ Γ.m),
@@ -432,7 +408,6 @@ inductive or_instance_seqt (Γ : sseqt) : sseqt → sseqt → Type
 def box_child_new {φ} (Γ : sseqt) (h₁ : nnf.box φ ∈ Γ.m) (h₂ : nnf.box φ ∉ Γ.b) : sseqt :=
 { goal := Γ.goal, 
   s := none,
-  a := Γ.a, 
   h := [], 
   b := box φ :: Γ.b, 
   m := φ :: Γ.m.erase (box φ),
@@ -451,7 +426,8 @@ def box_child_new {φ} (Γ : sseqt) (h₁ : nnf.box φ ∈ Γ.m) (h₂ : nnf.box
   ha := λ φ h, absurd h $ list.not_mem_nil _,
   hb := cons_box_only Γ.hb,
   ps₁ := by intro; contradiction,
-  ps₂ := by intro; contradiction}
+  ps₂ := by intro; contradiction,
+  .. Γ}
 
 inductive box_new_instance_seqt (Γ : sseqt) : sseqt → Type
 | cons : Π {φ} (h₁ : nnf.box φ ∈ Γ.m) (h₂ : nnf.box φ ∉ Γ.b), 
@@ -492,14 +468,14 @@ theorem mem_filter_undia_left : Π l Γ φ (h₁ : dia φ ∈ Γ) (h₂ : φ ∉
 | l [] φ h₁ h₂ := absurd h₁ $ list.not_mem_nil _
 | l (hd :: tl) φ h₁ h₂ := 
 begin
-cases h : hd,
-case nnf.dia : ψ 
-{rw h at h₁, simp, 
- by_cases hc : ψ ∈ l,
- {rw if_pos, apply mem_filter_undia_left, cases h₁, {injection h₁ with h₁', rw ←h₁' at hc, contradiction}, {exact h₁}, repeat {assumption}},
- {rw if_neg, cases h₁, {injection h₁ with h₁', rw h₁', simp}, {right, apply mem_filter_undia_left, exact h₁, exact h₂}, exact hc}},
-all_goals 
-{simp, rw h at h₁, cases h₁, contradiction, apply mem_filter_undia_left, repeat {assumption}}
+  cases h : hd,
+  case nnf.dia : ψ 
+  {rw h at h₁, simp, 
+   by_cases hc : ψ ∈ l,
+   {rw if_pos, apply mem_filter_undia_left, cases h₁, {injection h₁ with h₁', rw ←h₁' at hc, contradiction}, {exact h₁}, repeat {assumption}},
+   {rw if_neg, cases h₁, {injection h₁ with h₁', rw h₁', simp}, {right, apply mem_filter_undia_left, exact h₁, exact h₂}, exact hc}},
+  all_goals 
+  {simp, rw h at h₁, cases h₁, contradiction, apply mem_filter_undia_left, repeat {assumption}}
 end
 
 theorem mem_filter_dia_right_aux : Π l Γ φ, φ ∈ filter_undia l Γ → dia φ ∈ Γ 
