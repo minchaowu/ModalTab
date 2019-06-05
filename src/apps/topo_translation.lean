@@ -4,7 +4,7 @@ open nnf
 -- local attribute [instance] classical.prop_decidable
 
 @[simp] def topo_to_kripke {α : Type} (tm : topo_model α) : kripke α := 
-{ rel := λ s t, s ∈ @closure _ tm.to_topological_space {t},
+{ rel := λ s t, s ∈ @_root_.closure _ tm.to_topological_space {t},
   val := λ n s, tm.v n s }
 
 theorem trans_force_left {α : Type} {tm : topo_model α} : Π {s} {φ : nnf}, (topo_force tm s φ) → force (topo_to_kripke tm) s φ

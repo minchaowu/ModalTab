@@ -1,4 +1,4 @@
-import .S4_defs 
+import .S4_defs .data
 open nnf prod list
 
 namespace prod
@@ -18,6 +18,11 @@ def measure_lex_wf' {α : Sort u} (f : α → ℕ × ℕ × ℕ) : well_founded 
 inv_image.wf f (lex_wf nat.lt_wf (measure_lex_wf (λ x, x)))
 
 end prod
+
+def sseqt_size (s : sseqt) : ℕ × ℕ × ℕ := 
+((closure s.goal).length - s.b.length, 
+ (closure s.goal).length - s.h.length, 
+ node_size s.m)
 
 instance : has_well_founded sseqt := 
 ⟨prod.measure_lex' sseqt_size, prod.measure_lex_wf' sseqt_size⟩

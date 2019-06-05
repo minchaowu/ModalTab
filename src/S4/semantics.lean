@@ -1,6 +1,222 @@
 import .ops
 open subtype nnf tmodel list
 
+section
+variables (φ ψ : nnf) (Γ₁ Γ₂ Δ Λ: list nnf) {st : Type}
+variables (k : S4 st) (s : st)
+open list
+
+theorem sat_subset (h₁ : Γ₁ ⊆ Γ₂) (h₂ : sat k s Γ₂) : sat k s Γ₁ :=
+λ x hx, h₂ _ (h₁ hx)
+
+theorem sat_sublist (h₁ : Γ₁ <+ Γ₂) (h₂ :sat k s Γ₂) : sat k s Γ₁ := 
+sat_subset _ _ _ _ (subset_of_sublist h₁) h₂
+
+theorem sat_append (h₁ : sat k s Γ₁) (h₂ : sat k s Γ₂) : sat k s (Γ₁ ++ Γ₂) :=
+begin
+  intros φ h, rw mem_append at h, cases h,
+  apply h₁ _ h, apply h₂ _ h
+end
+
+theorem unsat_contra  {Δ n} : var n ∈ Δ →  neg n ∈ Δ →  unsatisfiable Δ:= 
+begin
+  intros h₁ h₂, intros v hsat, intros s hsat,
+  have := hsat _ h₁, have := hsat _ h₂, simpa
+end
+
+theorem unsat_contra_seqt {Δ : sseqt} {n} : var n ∈ Δ.m →  neg n ∈ Δ.m →  unsatisfiable (Δ.m ++ Δ.b):= 
+begin
+  intros h₁ h₂, intros st m, intros s hsat,
+  have := unsat_contra h₁ h₂,
+  have := this _ m s,
+  apply this,
+  apply sat_subset _ _ _ _ _ hsat, 
+  simp
+end
+
+theorem sat_of_and : force k s (and φ ψ) ↔ (force k s φ) ∧ (force k s ψ) := 
+by split; {intro, simpa}
+
+theorem sat_of_sat_erase (h₁ : sat k s $ Δ.erase φ) (h₂ : force k s φ) : sat k s Δ := 
+begin
+  intro ψ, intro h,
+  by_cases (ψ = φ),
+  {rw h, assumption},
+  {have : ψ ∈ Δ.erase φ,
+   rw mem_erase_of_ne, assumption, exact h,
+   apply h₁, assumption}
+end
+
+theorem unsat_and_of_unsat_split 
+        (h₁ : and φ ψ ∈ Δ) 
+        (h₂ : unsatisfiable $ φ :: ψ :: Δ.erase (and φ ψ)) : 
+        unsatisfiable Δ :=
+begin
+  intro st, intros, intro h,
+  apply h₂, swap 3, exact k, swap, exact s,
+  intro e, intro he,
+  cases he,
+  {rw he, have := h _ h₁, rw sat_of_and at this, exact this.1},
+  {cases he, 
+    {rw he, have := h _ h₁, rw sat_of_and at this, exact this.2}, 
+    {have := h _ h₁, apply h, apply mem_of_mem_erase he} }
+end
+
+theorem unsat_and_of_unsat_split_seqt {Γ}
+        (h₁ : and φ ψ ∈ Δ) 
+        (h₂ : unsatisfiable $ (φ :: ψ :: Δ.erase (and φ ψ)++Γ)) : 
+        unsatisfiable (Δ++Γ) :=
+begin
+  intro st, intros, intro h,
+  apply h₂, swap 3, exact k, swap, exact s,
+  intro e, intro he,
+  cases he,
+  {rw he, have := h _ (mem_append_left _ h₁), rw sat_of_and at this, exact this.1},
+  {cases he, 
+    {rw he, have := h _ (mem_append_left _ h₁), rw sat_of_and at this, exact this.2},
+    {have := h _ (mem_append_left _ h₁), apply h, apply mem_of_mem_erase, rw erase_append_left, exact he, exact h₁} }
+end
+
+theorem sat_and_of_sat_split
+        (h₁ : and φ ψ ∈ Δ) 
+        (h₂ : sat k s $ φ :: ψ :: Δ.erase (and φ ψ)) : 
+        sat k s Δ := 
+begin
+  intro e, intro he,
+  by_cases (e = and φ ψ),
+  { rw h, dsimp, split, repeat {apply h₂, simp} },
+  { have : e ∈ Δ.erase (and φ ψ),
+      { rw mem_erase_of_ne, repeat { assumption } },
+    apply h₂, simp [this] }
+end
+
+theorem sat_and_of_sat_split_seqt {Γ}
+        (h₁ : and φ ψ ∈ Δ) 
+        (h₂ : sat k s $ (φ :: ψ :: Δ.erase (and φ ψ)++Γ)) : 
+        sat k s (Δ++Γ) := 
+begin
+  intro e, intro he,
+  by_cases (e = and φ ψ),
+  { rw h, dsimp, split, repeat {apply h₂, simp} },
+  { have : e ∈ Δ.erase (and φ ψ) ++ Γ,
+      { rw ←erase_append_left, rw mem_erase_of_ne, repeat {assumption} },
+    apply h₂, simp [this] }
+end
+
+theorem sat_split_of_sat_and_seqt {Γ}
+        (h₁ : and φ ψ ∈ Δ) 
+        (h₂ : sat k s (Δ++Γ)) : 
+        sat k s $ (φ :: ψ :: Δ.erase (and φ ψ)++Γ) := 
+begin
+  intros e he, rw mem_append at he, cases he,
+  have : force k s (and φ ψ), {apply h₂, simp [h₁]}, rw sat_of_and at this, 
+  {cases he, 
+  {rw he, exact this.left}, 
+  {cases he, rw he, exact this.right, apply h₂, rw mem_append, left, apply mem_of_mem_erase he}
+  },
+  {apply h₂, rw mem_append, right, exact he}
+end
+
+theorem unsat_or_of_unsat_split_seqt {Γ}
+        (h : or φ ψ ∈ Δ) 
+        (h₁ : unsatisfiable $ (φ :: Δ.erase (nnf.or φ ψ)++Γ)) 
+        (h₂ : unsatisfiable $ (ψ :: Δ.erase (nnf.or φ ψ)++Γ)) : 
+        unsatisfiable $ (Δ++Γ) := 
+begin
+  intro, intros, intro hsat,
+  have := hsat _ (mem_append_left _ h),
+  dsimp at this,
+  cases this,
+  {apply h₁, swap 3, exact k, swap, exact s, intro e, intro he, 
+   cases he, rw he, exact this, apply hsat, 
+apply mem_of_mem_erase, rw erase_append_left, exact he, exact h},
+  {apply h₂, swap 3, exact k, swap, exact s, intro e, intro he, 
+   cases he, rw he, exact this, apply hsat, apply mem_of_mem_erase, rw erase_append_left, exact he, exact h}
+end
+
+theorem sat_or_of_sat_split_left 
+        (h : or φ ψ ∈ Δ) 
+        (hl : sat k s $ φ :: Δ.erase (nnf.or φ ψ)) :
+        sat k s Δ := 
+begin
+  intros e he,
+  by_cases (e = or φ ψ),
+  { rw h, dsimp, left, apply hl, simp},
+  {have : e ∈ Δ.erase (or φ ψ),
+     { rw mem_erase_of_ne, repeat { assumption } },
+   apply hl, simp [this]}
+end
+
+theorem sat_or_of_sat_split_right
+        (h : or φ ψ ∈ Δ) 
+        (hl : sat k s $ ψ :: Δ.erase (nnf.or φ ψ)) :
+        sat k s Δ := 
+begin
+  intros e he,
+  by_cases (e = or φ ψ),
+  { rw h, dsimp, right, apply hl, simp},
+  { have : e ∈ Δ.erase (or φ ψ),
+      { rw mem_erase_of_ne, repeat { assumption } },
+    apply hl, simp [this] }
+end
+
+/- S4-specific lemmas -/
+
+theorem force_of_force_box (h : force k s $ box φ) : force k s φ 
+:= by apply h; apply k.refl
+
+theorem force_box_box_of_force_box : force k s (box φ) → force k s (box (box φ)) :=
+by intros h s₁ rs₁ s₂ rs₂; apply h; apply k.trans rs₁ rs₂
+
+theorem unsat_of_unsat_box_new
+        (h₁ : box φ ∈ Δ) 
+        (h₂ : unsatisfiable $ (φ :: Δ.erase (box φ)) ++ box φ :: Λ) : 
+        unsatisfiable (Δ ++ Λ) :=
+begin
+  intros st k s h,
+  apply h₂, swap 3, exact k, swap, exact s,
+  intros e he,
+  rw [mem_append] at he,
+  cases he,
+  {cases he, 
+    {rw he, apply force_of_force_box, apply h (box φ), simp [h₁]},
+    {apply h, rw mem_append, left, apply mem_of_mem_erase he }},
+  {cases he, 
+    {rw ←he at h₁, apply h, rw mem_append, left, exact h₁},
+    {apply h, rw mem_append, right, assumption}}
+end
+
+theorem sat_copy_of_sat_box_new
+        (h₁ : box φ ∈ Δ) 
+        (h₂ : sat k s $ (φ :: Δ.erase (box φ)) ++ box φ :: Λ) : 
+        sat k s (Δ ++ Λ) :=
+begin
+  intros ψ hφ,
+  rw mem_append at hφ,
+  cases hφ,
+  {by_cases heq : ψ = box φ, 
+    {rw heq, apply h₂ (box φ), simp}, 
+    {have := mem_erase_of_ne heq, rw ←this at hφ, apply h₂, simp, right, left, exact hφ}},
+  {apply h₂, simp, repeat {right}, exact hφ}
+end
+
+theorem unsat_of_unsat_box_dup
+        (h₁ : box φ ∈ Δ)
+        (h₃ : unsatisfiable $ (φ :: Δ.erase (box φ)) ++ Λ) : 
+        unsatisfiable (Δ ++ Λ) :=
+begin
+  intros st k s h,
+  apply h₃, swap 3, exact k, swap, exact s,
+  intros e he,
+  cases he,
+  {rw he, apply force_of_force_box, apply h (box φ), simp [h₁]},
+  {have := mem_append.1 he, cases this, 
+   {apply h, apply mem_append_left, apply mem_of_mem_erase this},
+   {apply h, apply mem_append_right, exact this}}
+end
+
+end
+
 def unmodal_seqt (Γ : sseqt) : list sseqt :=
 @list.pmap _ _ (λ φ, φ ∉ Γ.h ∧ dia φ ∈ Γ.m)
 (λ d h,

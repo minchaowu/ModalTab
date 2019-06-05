@@ -11,7 +11,7 @@ structure topo_model (α : Type) extends topological_space α :=
 | s (and φ ψ)  := topo_force s φ ∧ topo_force s ψ
 | s (or φ ψ)   := topo_force s φ ∨ topo_force s ψ
 | s (box φ)    := @interior _ tm.to_topological_space (λ a, topo_force a φ) s
-| s (dia φ)    := @closure _ tm.to_topological_space (λ a, topo_force a φ) s
+| s (dia φ)    := @_root_.closure _ tm.to_topological_space (λ a, topo_force a φ) s
 
 def topo_sat {α : Type} (tm : topo_model α) (s) (Γ : list nnf) : Prop := ∀ φ ∈ Γ, topo_force tm s φ
 
