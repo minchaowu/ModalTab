@@ -55,9 +55,9 @@ theorem split_lt_and_seqt {φ ψ} (Γ : sseqt) (h : nnf.and φ ψ ∈ Γ.m) :
 prod.measure_lex' sseqt_size 
 (and_child Γ h) Γ :=
 begin
-right, right,
-simp only [and_child],
-apply split_lt_and_size _ h
+  right, right,
+  simp only [and_child],
+  apply split_lt_and_size _ h
 end
 
 theorem split_lt_or_size_left {φ ψ} (Γ : list nnf) (h : nnf.or φ ψ ∈ Γ) :
@@ -89,17 +89,17 @@ end
 theorem split_lt_or_seqt_left {φ ψ} (Γ : sseqt) (h : nnf.or φ ψ ∈ Γ.m) :
 prod.measure_lex' sseqt_size (or_child_left Γ h) Γ :=
 begin
-right, right,
-simp only [or_child_left],
-apply split_lt_or_size_left _ h
+  right, right,
+  simp only [or_child_left],
+  apply split_lt_or_size_left _ h
 end
 
 theorem split_lt_or_seqt_right {φ ψ} (Γ : sseqt) (h : nnf.or φ ψ ∈ Γ.m) :
 prod.measure_lex' sseqt_size (or_child_right Γ h) Γ :=
 begin
-right, right,
-simp only [or_child_right],
-apply split_lt_or_size_right _ h
+  right, right,
+  simp only [or_child_right],
+  apply split_lt_or_size_right _ h
 end
 
 theorem copy_lt_size {φ} (Γ : list nnf) (h : nnf.box φ ∈ Γ) :
@@ -115,19 +115,19 @@ end
 theorem copy_lt_seqt {φ} (Γ : sseqt) (h : nnf.box φ ∈ Γ.m) :
 prod.measure_lex' sseqt_size (box_child Γ h) Γ := 
 begin
-right, right,
-simp only [box_child],
-apply copy_lt_size _ h
+  right, right,
+  simp only [box_child],
+  apply copy_lt_size _ h
 end
 
 theorem box_new_lt_seqt {φ} (Γ : sseqt) 
 (h₁ : nnf.box φ ∈ Γ.m) (h₂ : nnf.box φ ∉ Γ.b) :
 prod.measure_lex' sseqt_size (box_child_new Γ h₁ h₂) Γ := 
 begin
-left,
-apply length_sub_lt_of_nodup_subperm,
-{dsimp [box_child_new], exact Γ.spb},
-{dsimp [box_child_new], apply Γ.sbm, exact h₁},
-{exact h₂},
-{exact Γ.ndb}
+  left,
+  apply length_sub_lt_of_nodup_subperm,
+  {dsimp [box_child_new], exact Γ.spb},
+  {dsimp [box_child_new], apply Γ.sbm, exact h₁},
+  {exact h₂},
+  {exact Γ.ndb}
 end

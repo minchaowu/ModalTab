@@ -4,7 +4,7 @@ The proofs compile after commit [5173c54](https://github.com/minchaowu/ModalTab/
 
 How to compile:
 
-+ Install [Lean](https://github.com/leanprover/lean/releases/tag/v3.4.2) using [elan](https://github.com/leanprover-community/mathlib/blob/master/docs/elan.md).
++ Install [Lean](https://github.com/leanprover/lean/releases/tag/v3.4.2) using [elan](https://github.com/Kha/elan).
 
 + Run `leanpkg build` in the root of this repository. Several lines of tests will be printed, but there should be no errors reported by Lean.
 
