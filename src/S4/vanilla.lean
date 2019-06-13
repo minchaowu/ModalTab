@@ -228,3 +228,10 @@ def ψ : nnf := and (box (var 1)) (dia (dia (neg 1)))
 def γ : nnf := and (and (dia (var 1)) (dia (var 2))) (box (or (neg 1) (neg 2)))
 
 #eval is_sat [γ] -- tt
+
+local infix ` ∨ `:1000 := nnf.or
+local infix ` ∧ `:1000 := nnf.and
+local prefix `~` := nnf.neg
+local prefix `+` := nnf.var
+
+set_option profiler true
