@@ -9,7 +9,21 @@ inductive fml
 | box (φ : fml)
 | dia (φ : fml)
 
+
 open fml
+
+def fml.to_string : fml → string
+| (var n)    := "P" ++ n.repr
+| (neg ϕ)    := "¬" ++ "(" ++ fml.to_string ϕ ++ ")"
+| (and φ ψ)  := fml.to_string φ ++ "∧" ++ fml.to_string ψ
+| (or φ ψ)   := fml.to_string φ ++ "∨" ++ fml.to_string ψ
+| (impl φ ψ) := fml.to_string φ ++ "→" ++ fml.to_string ψ
+| (box φ)    := "□" ++ "(" ++ fml.to_string φ ++ ")"
+| (dia φ)    := "◇" ++ "(" ++ fml.to_string φ ++ ")"
+
+instance fml_repr : has_repr fml := ⟨fml.to_string⟩
+
+instance dec_eq_fml : decidable_eq fml := by tactic.mk_dec_eq_instance
 
 @[simp] def fml_size : fml → ℕ 
 | (var n)    := 1
