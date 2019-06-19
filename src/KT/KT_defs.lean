@@ -99,8 +99,10 @@ force builder (cons v l) φ
 
 structure seqt : Type :=
 (main : list nnf)
-(hdld : list nnf) -- handled boxes
+(hdld : list nnf)
+-- srefl main hdld says that sequent hdld | main satisfies theorem 3.7(2)
 (pmain : srefl main hdld)
+-- box_only says there are only boxed formulas in hdld
 (phdld : box_only hdld)
 
 class val_constructible (Γ : seqt) :=

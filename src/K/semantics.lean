@@ -43,6 +43,8 @@ class modal_applicable (Γ : list nnf) extends val_constructible Γ :=
 class model_constructible (Γ : list nnf) extends val_constructible Γ :=
 (no_dia : ∀ {φ}, nnf.dia φ ∉ Γ)
 
+-- unbox and undia take a list of formulas, and
+-- get rid of the outermost box or diamond of each formula respectively
 def unmodal (Γ : list nnf) : list $ list nnf := 
 list.map (λ d, d :: (unbox Γ)) (undia Γ)
 

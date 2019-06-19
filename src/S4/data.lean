@@ -47,17 +47,19 @@ instance (Γ) : decidable_eq (box_only Γ) := by tactic.mk_dec_eq_instance
 
 structure sseqt : Type :=
 (goal : list nnf)
-(s : sig)
-(a : list psig)
+(s : sig) -- sig := option psig
+(a : list psig) -- psig is the signature, which is of the form (d, b)
 (h b m: list nnf)
-(ndh : list.nodup h)
+(ndh : list.nodup h) -- nodup says there is no duplicate elements
 (ndb : list.nodup b)
-(sph : h <+~ closure goal)
+(sph : h <+~ closure goal) -- <+~ denotes sublist permutation
 (spb : b <+~ closure goal)
 (sbm : m ⊆ closure goal)
 (ha : ∀ φ ∈ h, (⟨φ, b⟩ : psig) ∈ a)
 (hb : box_only b)
+-- dsig takes a signature (d, b) and a proof h, and returns d
 (ps₁ : Π (h : s ≠ none), dsig s h ∈ m)
+-- bsig takes a signature (d, b) and a proof h, and returns b
 (ps₂ : Π (h : s ≠ none), bsig s h ⊆ m)
 
 instance : decidable_eq sseqt := by tactic.mk_dec_eq_instance
