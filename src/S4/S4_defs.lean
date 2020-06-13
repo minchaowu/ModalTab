@@ -243,7 +243,7 @@ by apply rtc.step _ _ _ h; apply rtc.refl
 
 def reach (s₁ s₂ : rmodel) := rtc reach_step s₁ s₂
 
-theorem refl_reach : Π s, reach s s := λ s, rtc.refl _ _
+theorem refl_reach : Π s, reach s s := λ s, rtc.refl s
 
 theorem trans_reach : Π s₁ s₂ s₃, reach s₁ s₂ → reach s₂ s₃ → reach s₁ s₃ := λ s₁ s₂ s₃ h₁ h₂, rtc.trans h₁ h₂
 

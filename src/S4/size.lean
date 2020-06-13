@@ -108,8 +108,7 @@ begin
   dsimp [node_size],
   rw ←size_erase_add_eq_size_sum Γ,
   swap, exact h, 
-  rw [add_comm], simp [sizeof,has_sizeof.sizeof, nnf.sizeof], 
-  apply nat.lt_succ_self 
+  rw [add_comm], simp [sizeof,has_sizeof.sizeof, nnf.sizeof]
 end
 
 theorem copy_lt_seqt {φ} (Γ : sseqt) (h : nnf.box φ ∈ Γ.m) :

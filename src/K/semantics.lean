@@ -124,8 +124,8 @@ by_cases heq : hd = a,
  by_cases ha : a ∈ l₁,
  {have hsub₁ := @subset_of_diff_filter l₁ tl,
   have hsp := @subperm_cons_diff _ _ a (l₁.erase a) tl,
-  have hsub₂ := subset_of_subperm hsp,
-  have hsub := (perm_subset (perm_diff_left tl (perm_erase ha))),
+  have hsub₂ := subperm.subset hsp,
+  have hsub := (perm.subset (perm.diff_right tl (perm_cons_erase ha))),
   intros x hx,
   cases hsub₁ hx with hxa,
   {left, exact hxa},
@@ -151,7 +151,7 @@ theorem unsat_subset (h₁ : Γ₁ ⊆ Γ₂) (h₂ : unsatisfiable Γ₁) : uns
 λ st k s h, (h₂ st k s (sat_subset _ Γ₂ _ _ h₁ h))
 
 theorem sat_sublist (h₁ : Γ₁ <+ Γ₂) (h₂ :sat k s Γ₂) : sat k s Γ₁ := 
-sat_subset _ _ _ _ (subset_of_sublist h₁) h₂
+sat_subset _ _ _ _ (sublist.subset h₁) h₂
 
 theorem unsat_sublist (h₁ : Γ₁ <+ Γ₂) (h₂ : unsatisfiable Γ₁) : unsatisfiable Γ₂ :=
 λ st k s h, (h₂ st k s (sat_sublist _ Γ₂ _ _ h₁ h))

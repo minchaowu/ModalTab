@@ -86,12 +86,12 @@ begin
   have := @le_of_unbox_degree tl, 
   cases (lt_or_eq_of_le this) with h₁ h₂,
   {have hne : max (count_modal ψ) (modal_degree (unbox tl)) ≠ max (count_modal (box ψ)) (modal_degree tl), 
-    { apply ne_of_lt, apply max_lt_max, {simp, exact dec_trivial}, {exact h₁} },
+    { apply ne_of_lt, apply max_lt_max, {simp}, {exact h₁} },
   contradiction },
   {rw [h₂, zero_degree_of_eq_unbox h₂] at h, 
   have : max (count_modal ψ) 0 < max (count_modal (box ψ)) 0,
     {simp [_root_.max], by_cases hz : count_modal ψ = 0,
-     repeat {simp [hz], exact dec_trivial} },
+     repeat {simp [hz]} },
   have hne := ne_of_lt this, contradiction } },
   case nnf.dia : ψ 
   {rw heq at h, dsimp at h, rw cons_degree at h, 
@@ -102,7 +102,7 @@ begin
   contradiction },
   {have : modal_degree (unbox tl) < max (count_modal (dia ψ)) (modal_degree tl),
     {rw [h₂, zero_degree_of_eq_unbox h₂], 
-     simp [_root_.max], apply nat.succ_pos},
+     simp [_root_.max] },
   have hne := ne_of_lt this, contradiction } },
   case nnf.var : ψ
   {rw heq at h, dsimp at h, rw cons_degree at h, 
@@ -156,7 +156,7 @@ begin
   case nnf.box : ψ 
   {dsimp, rw cons_degree, rw cons_degree,
   apply max_lt_max, 
-  { simp, exact dec_trivial }, 
+  { simp }, 
   { apply unbox_degree_aux, swap, exact φ, 
     cases h, {rw heq at h, contradiction}, {exact h} } },
   case nnf.dia : ψ 
@@ -164,7 +164,7 @@ begin
   have := @le_of_unbox_degree tl, 
   cases (lt_or_eq_of_le this) with h₁ h₂,
   {rw lt_max_iff, right, exact h₁},
-  {rw [h₂, zero_degree_of_eq_unbox h₂], simp [_root_.max], apply nat.succ_pos} },
+  {rw [h₂, zero_degree_of_eq_unbox h₂], simp [_root_.max]} },
   all_goals 
   {dsimp [-modal_degree], rw cons_degree, 
   rw lt_max_iff, right, 
@@ -178,7 +178,7 @@ theorem unbox_degree : Π {Γ φ}, dia φ ∈ Γ →
 | (hd::tl) φ h := 
 begin
   rw cons_degree, apply max_lt,
-  {apply lt_of_lt_of_le, swap 3, exact count_modal (dia φ), simp, exact dec_trivial, apply le_of_mem_degree, exact h},
+  {apply lt_of_lt_of_le, swap 3, exact count_modal (dia φ), simp, apply le_of_mem_degree, exact h},
   {apply unbox_degree_aux, exact h}
 end
 

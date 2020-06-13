@@ -10,7 +10,7 @@ theorem sat_subset (h₁ : Γ₁ ⊆ Γ₂) (h₂ : sat k s Γ₂) : sat k s Γ�
 λ x hx, h₂ _ (h₁ hx)
 
 theorem sat_sublist (h₁ : Γ₁ <+ Γ₂) (h₂ :sat k s Γ₂) : sat k s Γ₁ := 
-sat_subset _ _ _ _ (subset_of_sublist h₁) h₂
+sat_subset _ _ _ _ (sublist.subset h₁) h₂
 
 theorem sat_append (h₁ : sat k s Γ₁) (h₂ : sat k s Γ₂) : sat k s (Γ₁ ++ Γ₂) :=
 begin
@@ -226,7 +226,7 @@ h := d :: Γ.h,
 m := d :: Γ.b,
 ndh := begin rw list.nodup_cons, split, exact h.1, exact Γ.ndh end,
 sph := begin apply list.cons_subperm_of_mem, apply Γ.ndh, exact h.1, apply mem_closure_dia, apply Γ.sbm, exact h.2,  exact Γ.sph end,
-sbm := begin rw list.cons_subset, split, apply mem_closure_dia, apply Γ.sbm, exact h.2, apply list.subset_of_subperm, exact Γ.spb end,
+sbm := begin rw list.cons_subset, split, apply mem_closure_dia, apply Γ.sbm, exact h.2, apply list.subperm.subset, exact Γ.spb end,
 ha  := begin intros φ h, cases h with l r, rw l, simp, right, apply Γ.ha, exact r end,
 ps₁ := begin simp [dsig] end,
 ps₂ := begin simp [bsig] end,
@@ -294,7 +294,7 @@ h := φ :: Γ.h,
 m := φ :: Γ.b,
 ndh := begin rw list.nodup_cons, split, exact h.1, exact Γ.ndh end,
 sph := begin apply list.cons_subperm_of_mem, apply Γ.ndh, exact h.1, apply mem_closure_dia, apply Γ.sbm, exact h.2,  exact Γ.sph end,
-sbm := begin rw list.cons_subset, split, apply mem_closure_dia, apply Γ.sbm, exact h.2, apply list.subset_of_subperm, exact Γ.spb end,
+sbm := begin rw list.cons_subset, split, apply mem_closure_dia, apply Γ.sbm, exact h.2, apply list.subperm.subset, exact Γ.spb end,
 ha  := begin intros φ h, cases h with l r, rw l, simp, right, apply Γ.ha, exact r end,
 ps₁ := begin intro, simp [dsig] end,
 ps₂ := begin intro, simp [bsig] end,
@@ -307,7 +307,7 @@ ps₂ := begin intro, simp [bsig] end,
        m := d :: Γ.b,
        ndh := begin rw list.nodup_cons, split, exact h.1, exact Γ.ndh end,
        sph := begin apply list.cons_subperm_of_mem, apply Γ.ndh, exact h.1, apply mem_closure_dia, apply Γ.sbm, exact h.2,  exact Γ.sph end,
-       sbm := begin rw list.cons_subset, split, apply mem_closure_dia, apply Γ.sbm, exact h.2, apply list.subset_of_subperm, exact Γ.spb end,
+       sbm := begin rw list.cons_subset, split, apply mem_closure_dia, apply Γ.sbm, exact h.2, apply list.subperm.subset, exact Γ.spb end,
        ha  := begin intros φ h, cases h with l r, rw l, simp, right, apply Γ.ha, exact r end,
        ps₁ := begin simp [dsig] end,
        ps₂ := begin simp [bsig] end,

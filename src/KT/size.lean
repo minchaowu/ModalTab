@@ -128,7 +128,7 @@ begin
 end
 
 def maximum_sublist {l₁ l₂ : list α} (h : l₁ <+ l₂) : maximum l₁ ≤ maximum l₂ :=
-maximum_subset (by assumption) (subset_of_sublist h)
+maximum_subset (by assumption) (sublist.subset h)
 
 end
 
@@ -297,8 +297,7 @@ begin
   dsimp [node_size],
   rw ←size_erase_add_eq_size_sum Γ,
   swap, exact h, 
-  rw [add_comm], simp [sizeof,has_sizeof.sizeof, nnf.sizeof], 
-  apply nat.lt_succ_self 
+  rw [add_comm], simp [sizeof,has_sizeof.sizeof, nnf.sizeof]
 end
 
 theorem copy_eq_degree {φ} (Γ Λ: list nnf) (h : nnf.box φ ∈ Γ) :

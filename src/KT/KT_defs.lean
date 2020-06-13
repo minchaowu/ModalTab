@@ -144,7 +144,7 @@ theorem sat_subset (h₁ : Γ₁ ⊆ Γ₂) (h₂ : sat k s Γ₂) : sat k s Γ�
 λ x hx, h₂ _ (h₁ hx)
 
 theorem sat_sublist (h₁ : Γ₁ <+ Γ₂) (h₂ :sat k s Γ₂) : sat k s Γ₁ := 
-sat_subset _ _ _ _ (subset_of_sublist h₁) h₂
+sat_subset _ _ _ _ (sublist.subset h₁) h₂
 
 theorem sat_append (h₁ : sat k s Γ₁) (h₂ : sat k s Γ₂) : sat k s (Γ₁ ++ Γ₂) :=
 begin

@@ -12,12 +12,9 @@ length l₂ - length (a :: l₁) < length l₂ - length l₁
 begin
   rw nat.sub_lt_sub_left_iff,
   { simp [zero_lt_one] }, 
-  { apply length_le_of_subperm, 
+  { apply subperm.length_le, 
     apply cons_subperm_of_mem; assumption }
 end
-
-theorem nil_subperm {l : list α} : [] <+~ l := 
-⟨[], perm.nil, by simp⟩ 
 
 end list
 

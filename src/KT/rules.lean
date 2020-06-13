@@ -40,7 +40,7 @@ def or_rule_seqt {Γ₁ Γ₂ Δ} (i : or_instance_seqt Δ Γ₁ Γ₂) :
                    assumption,
                    apply sat_subset, swap, exact w.2,
                    rw erase_append_left _ i_h,
-                   rw ←cons_append, simp
+                   rw ←cons_append, simp [subset_cons],
                  end
 | _ (open_ w) := begin
                    right,
@@ -52,7 +52,7 @@ def or_rule_seqt {Γ₁ Γ₂ Δ} (i : or_instance_seqt Δ Γ₁ Γ₂) :
                    assumption,
                    apply sat_subset, swap, exact w.2,
                    rw erase_append_left _ i_h,
-                   rw ←cons_append, simp
+                   rw ←cons_append, simp [subset_cons]
                  end
 | (closed h₁) (closed h₂):= begin 
                               left,
@@ -72,7 +72,7 @@ begin
   assumption,
   apply sat_subset, swap, exact h,
   rw erase_append_left _ i_h,
-  rw ←cons_append, simp
+  rw ←cons_append, simp [subset_cons]
 end
 
 def copy_rule_seqt {Γ Δ : seqt} (i : copy_instance_seqt Γ Δ) : node Δ → node Γ
