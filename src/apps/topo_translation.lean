@@ -18,7 +18,7 @@ begin
   intros s' hs',
   apply trans_force_left,
   apply hw.2,
-  rw ←set.inter_singleton_ne_empty,
+  rw ←set.inter_singleton_nonempty,
   have := (@mem_closure_iff _ tm.to_topological_space _ _).1,
   swap 3, exact {s'}, apply this, simpa using hs',
   exact hw.1, exact hmem
@@ -31,8 +31,7 @@ begin
     { apply tm.is_alex, intros, exact H.2 },
   have hmem : s ∈ o,
     { rw set.mem_sInter, intros, exact H.1 },
-  have := (@mem_closure_iff _ tm.to_topological_space _ _).1 h o openo hmem,
-  have ex := set.exists_mem_of_ne_empty this,
+  have ex := (@mem_closure_iff _ tm.to_topological_space _ _).1 h o openo hmem,
   cases ex with w hw, dsimp,
   split, split, swap 3, 
   { exact w },
@@ -41,7 +40,7 @@ begin
     intros o' hopen' hmem',
     have : o ⊆ o',
       { intro x, intro hx, rw set.mem_sInter at hx, apply hx, split, repeat {assumption} },
-  rw set.inter_singleton_ne_empty,
+  rw set.inter_singleton_nonempty,
   apply this hw.1 },
   { exact trans_force_left hw.2 }
 end

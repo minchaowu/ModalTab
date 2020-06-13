@@ -45,20 +45,6 @@ open fml
 | (dia φ)          := nnf.dia (fml.to_nnf φ)
 using_well_founded {rel_tac := λ _ _, `[exact ⟨_, measure_wf fml_size⟩]}
 
-namespace classical
-variables {α : Sort*} {p : α → Prop}
-variables {a b c d : Prop}
-
-local attribute [instance] prop_decidable
-
-theorem not_and_distrib : ¬ (a ∧ b) ↔ ¬a ∨ ¬b :=
-⟨λ h, if ha : a then or.inr (λ hb, h ⟨ha, hb⟩) else or.inl ha, not_and_of_not_or_not⟩
-
-@[simp] theorem not_imp : ¬(a → b) ↔ a ∧ ¬b :=
-⟨λ h, ⟨of_not_imp h, not_of_not_imp h⟩, not_imp_of_and_not⟩
-
-end classical
-
 @[simp] def trans_size_left {st} (k : kripke st) : (Σ' (s) (φ : fml), fml_force k s φ) → ℕ := 
 λ h, fml_size h.snd.fst
 
